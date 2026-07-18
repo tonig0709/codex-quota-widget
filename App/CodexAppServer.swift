@@ -98,7 +98,7 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.2.0"
+                    "version": "0.2.1"
                 ]
             ])
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in

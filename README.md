@@ -38,7 +38,8 @@ widget requests a five-minute fallback refresh.
    choose **Edit Widgets**, and add **Codex Quota**.
 
 Use the segmented **深色 / 浅色** control in the app to change both the app
-preview and desktop widget appearance.
+preview and the default widget appearance. In macOS, Control-click a widget,
+choose **编辑小组件**, then choose **跟随 App / 深色 / 浅色** for that widget.
 
 If macOS still reports that the app cannot be opened, remove only the downloaded
 app's quarantine attribute, then open it again:
