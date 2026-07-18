@@ -39,7 +39,9 @@ widget requests a five-minute fallback refresh.
 
 Use the segmented **深色 / 浅色** control in the app to change both the app
 preview and the default widget appearance. In macOS, Control-click a widget,
-choose **编辑小组件**, then choose **跟随 App / 深色 / 浅色** for that widget.
+choose **编辑小组件**, then turn **浅色外观** on for light or off for dark.
+The widget gallery offers both a detailed large widget and a small circular
+remaining-quota widget.
 
 No Terminal is normally required. If macOS still reports that the app cannot be
 opened after Control-clicking **Open**, remove only the downloaded app's

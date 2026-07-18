@@ -3,30 +3,11 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-enum WidgetAppearanceOption: String, AppEnum {
-    case followApp, dark, light
-
-    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "外观")
-    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [
-        .followApp: "跟随 App",
-        .dark: "深色",
-        .light: "浅色"
-    ]
-
-    func resolved(using snapshot: UsageSnapshot) -> WidgetAppearance {
-        switch self {
-        case .followApp: snapshot.resolvedAppearance
-        case .dark: .dark
-        case .light: .light
-        }
-    }
-}
-
 struct AppearanceConfigurationIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "显示设置"
 
-    @Parameter(title: "外观", default: .followApp)
-    var appearance: WidgetAppearanceOption
+    @Parameter(title: "浅色外观", default: false)
+    var useLightAppearance: Bool
 }
 
 struct CodexQuotaEntry: TimelineEntry {
@@ -52,7 +33,7 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
 
     private func entry(for configuration: AppearanceConfigurationIntent) async -> CodexQuotaEntry {
         var snapshot = await loadSnapshot()
-        snapshot.appearance = configuration.appearance.resolved(using: snapshot)
+        snapshot.appearance = configuration.useLightAppearance ? .light : .dark
         return CodexQuotaEntry(date: .now, snapshot: snapshot)
     }
 
@@ -71,17 +52,33 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     }
 }
 
+struct CodexQuotaWidgetEntryView: View {
+    @Environment(\.widgetFamily) private var family
+
+    let entry: CodexQuotaEntry
+
+    var body: some View {
+        Group {
+            if family == .systemSmall {
+                QuotaRingWidgetView(snapshot: entry.snapshot)
+            } else {
+                QuotaWidgetView(snapshot: entry.snapshot)
+            }
+        }
+        .containerBackground(for: .widget) { Color.clear }
+    }
+}
+
 struct CodexQuotaWidget: Widget {
     let kind = SnapshotStore.widgetKind
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: AppearanceConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            QuotaWidgetView(snapshot: entry.snapshot)
-                .containerBackground(for: .widget) { Color.clear }
+            CodexQuotaWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Codex Quota")
         .description("查看 Codex 周额度与近七天 Token 用量。")
-        .supportedFamilies([.systemExtraLarge])
+        .supportedFamilies([.systemSmall, .systemExtraLarge])
         .contentMarginsDisabled()
     }
 }
