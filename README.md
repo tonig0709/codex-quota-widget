@@ -29,8 +29,8 @@ widget requests a five-minute fallback refresh.
 ## Install a release
 
 1. Open [Releases](https://github.com/tonig0709/codex-quota-widget/releases)
-   and download `Codex-Quota-<version>-macOS.zip`.
-2. Unzip it and drag **Codex Quota.app** into `/Applications`.
+   and download `Codex-Quota-<version>-macOS.dmg`.
+2. Open the DMG and drag **Codex Quota.app** onto **Applications**.
 3. On first launch, Control-click the app and choose **Open**. The public build
    is ad-hoc signed because this open-source repository does not contain an
    Apple Developer ID certificate.
@@ -41,8 +41,9 @@ Use the segmented **深色 / 浅色** control in the app to change both the app
 preview and the default widget appearance. In macOS, Control-click a widget,
 choose **编辑小组件**, then choose **跟随 App / 深色 / 浅色** for that widget.
 
-If macOS still reports that the app cannot be opened, remove only the downloaded
-app's quarantine attribute, then open it again:
+No Terminal is normally required. If macOS still reports that the app cannot be
+opened after Control-clicking **Open**, remove only the downloaded app's
+quarantine attribute, then open it again:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Codex Quota.app"
