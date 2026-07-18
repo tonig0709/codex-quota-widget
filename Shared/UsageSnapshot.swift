@@ -85,8 +85,8 @@ public enum QuotaLevel: Equatable, Sendable {
 }
 
 public enum SnapshotStore {
-    // New kind clears WidgetKit's cached v0.2/v0.3 AppIntent schema.
-    public static let widgetKind = "dev.codexquota.widget.v2"
+    public static let smallWidgetKind = "dev.codexquota.widget.small.v3"
+    public static let largeWidgetKind = "dev.codexquota.widget.large.v3"
     private static let key = "usageSnapshot"
 
     public static func load(defaults: UserDefaults = sharedDefaults) -> UsageSnapshot {
