@@ -98,7 +98,7 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.3.0"
+                    "version": "0.3.1"
                 ]
             ])
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -170,12 +170,12 @@ final class CodexAppServer: ObservableObject {
                 NSWorkspace.shared.open(url)
             }
         case 3:
-            if let weekly = try? AppServerParser.weeklyWindow(from: object) {
+            if let weekly = try? AppServerParser.weeklyWindow(from: object), weekly != snapshot.weekly {
                 snapshot.weekly = weekly
                 persist()
             }
         case 4:
-            if let usage = try? AppServerParser.dailyUsage(from: object) {
+            if let usage = try? AppServerParser.dailyUsage(from: object), usage != snapshot.dailyUsage {
                 snapshot.dailyUsage = usage
                 persist()
             }
