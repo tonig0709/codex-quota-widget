@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#253651"/><stop offset=".48" stop-color="#101725"/><stop offset="1" stop-color="#080b12"/></linearGradient>
+    <radialGradient id="glow" cx=".24" cy=".1" r=".9"><stop stop-color="#b9dcff" stop-opacity=".72"/><stop offset=".32" stop-color="#4d8de8" stop-opacity=".28"/><stop offset="1" stop-color="#17335f" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bar" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#2d7ce5"/><stop offset="1" stop-color="#7ec8ff"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="30" stdDeviation="34" flood-color="#000" flood-opacity=".48"/></filter>
+  </defs>
+  <rect x="62" y="62" width="900" height="900" rx="220" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="63" y="63" width="898" height="898" rx="219" fill="url(#glow)" stroke="#fff" stroke-opacity=".28" stroke-width="4"/>
+  <g fill="url(#bar)">
+    <rect x="260" y="560" width="92" height="190" rx="38"/>
+    <rect x="406" y="430" width="92" height="320" rx="38"/>
+    <rect x="552" y="285" width="92" height="465" rx="38"/>
+    <rect x="698" y="485" width="92" height="265" rx="38"/>
+  </g>
+  <path d="M230 820h560" stroke="#dcedff" stroke-opacity=".42" stroke-width="18" stroke-linecap="round"/>
+  <path d="M175 220c190-105 400-96 635 25" fill="none" stroke="#fff" stroke-opacity=".36" stroke-width="22" stroke-linecap="round"/>
+</svg>
