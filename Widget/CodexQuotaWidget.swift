@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-struct AppearanceV2ConfigurationIntent: WidgetConfigurationIntent {
+struct AppearanceV3ConfigurationIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "显示设置"
     static var description = IntentDescription("选择此小组件的深色或浅色外观。")
 
@@ -23,16 +23,25 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
         CodexQuotaEntry(date: .now, snapshot: .placeholder)
     }
 
-    func snapshot(for configuration: AppearanceV2ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
-        await entry(for: configuration)
+    func snapshot(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
+        if context.isPreview {
+            return previewEntry(for: configuration)
+        }
+        return await entry(for: configuration)
     }
 
-    func timeline(for configuration: AppearanceV2ConfigurationIntent, in context: Context) async -> Timeline<CodexQuotaEntry> {
+    func timeline(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> Timeline<CodexQuotaEntry> {
         let entry = await entry(for: configuration)
         return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(5 * 60)))
     }
 
-    private func entry(for configuration: AppearanceV2ConfigurationIntent) async -> CodexQuotaEntry {
+    private func previewEntry(for configuration: AppearanceV3ConfigurationIntent) -> CodexQuotaEntry {
+        var snapshot = UsageSnapshot.placeholder
+        snapshot.appearance = configuration.useLightAppearance ? .light : .dark
+        return CodexQuotaEntry(date: .now, snapshot: snapshot)
+    }
+
+    private func entry(for configuration: AppearanceV3ConfigurationIntent) async -> CodexQuotaEntry {
         var snapshot = await loadSnapshot()
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
         return CodexQuotaEntry(date: .now, snapshot: snapshot)
@@ -53,38 +62,36 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     }
 }
 
-struct CodexQuotaWidgetEntryView: View {
-    @Environment(\.widgetFamily) private var family
-
-    let entry: CodexQuotaEntry
-
-    var body: some View {
-        Group {
-            if family == .systemSmall {
-                QuotaRingWidgetView(snapshot: entry.snapshot)
-            } else {
-                QuotaWidgetView(snapshot: entry.snapshot)
-            }
+struct SmallCodexQuotaWidget: Widget {
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: SnapshotStore.smallWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
+            QuotaRingWidgetView(snapshot: entry.snapshot)
+                .containerBackground(for: .widget) { Color.clear }
         }
-        .containerBackground(for: .widget) { Color.clear }
+        .configurationDisplayName("Codex Quota · 小型")
+        .description("以圆环显示 Codex 周额度剩余比例。")
+        .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled()
     }
 }
 
-struct CodexQuotaWidget: Widget {
-    let kind = SnapshotStore.widgetKind
-
+struct LargeCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: AppearanceV2ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            CodexQuotaWidgetEntryView(entry: entry)
+        AppIntentConfiguration(kind: SnapshotStore.largeWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
+            QuotaWidgetView(snapshot: entry.snapshot)
+                .containerBackground(for: .widget) { Color.clear }
         }
-        .configurationDisplayName("Codex Quota")
+        .configurationDisplayName("Codex Quota · 大型")
         .description("查看 Codex 周额度与近七天 Token 用量。")
-        .supportedFamilies([.systemSmall, .systemExtraLarge])
+        .supportedFamilies([.systemExtraLarge])
         .contentMarginsDisabled()
     }
 }
 
 @main
 struct CodexQuotaWidgetBundle: WidgetBundle {
-    var body: some Widget { CodexQuotaWidget() }
+    var body: some Widget {
+        SmallCodexQuotaWidget()
+        LargeCodexQuotaWidget()
+    }
 }

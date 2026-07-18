@@ -98,7 +98,7 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.3.1"
+                    "version": "0.3.2"
                 ]
             ])
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -212,7 +212,7 @@ final class CodexAppServer: ObservableObject {
     private func persist() {
         snapshot.updatedAt = .now
         SnapshotStore.save(snapshot)
-        WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.widgetKind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func send(method: String, id: Int? = nil, params: [String: Any]? = nil) {
