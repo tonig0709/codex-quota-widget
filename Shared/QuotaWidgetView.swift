@@ -161,3 +161,97 @@ public struct QuotaWidgetView: View {
         String(value.suffix(5)).replacingOccurrences(of: "-", with: "/")
     }
 }
+
+public struct QuotaRingWidgetView: View {
+    public let snapshot: UsageSnapshot
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    public init(snapshot: UsageSnapshot) { self.snapshot = snapshot }
+
+    private var remaining: Int { snapshot.weekly?.remainingPercent ?? 0 }
+    private var isLight: Bool { snapshot.resolvedAppearance == .light }
+    private var primaryText: Color { isLight ? Color(red: 0.08, green: 0.1, blue: 0.14) : .white }
+    private var secondaryText: Color { isLight ? .black.opacity(0.52) : .white.opacity(0.56) }
+    private var trackColor: Color { isLight ? .black.opacity(0.09) : .white.opacity(0.14) }
+    private var quotaColor: Color {
+        switch QuotaLevel(remainingPercent: remaining) {
+        case .healthy: .green
+        case .warning: .orange
+        case .critical: .red
+        }
+    }
+
+    public var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle().stroke(trackColor, lineWidth: 12)
+                Circle()
+                    .trim(from: 0, to: CGFloat(remaining) / 100)
+                    .stroke(quotaColor.gradient, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Image("CodexMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 42, height: 42)
+                    .accessibilityHidden(true)
+            }
+            .frame(width: 104, height: 104)
+
+            Text("\(remaining)%")
+                .font(.system(size: 44, weight: .semibold, design: .rounded))
+                .tracking(-1.8)
+                .monospacedDigit()
+            Text("周额度剩余")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(secondaryText)
+        }
+        .padding(18)
+        .foregroundStyle(primaryText)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(surfaceGradient)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .strokeBorder(borderGradient, lineWidth: 1)
+                }
+                .overlay(alignment: .top) {
+                    Capsule()
+                        .fill(.white.opacity(isLight ? 0.72 : 0.24))
+                        .frame(height: 1)
+                        .padding(.horizontal, 34)
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Codex 周额度剩余 \(remaining)%")
+    }
+
+    private var surfaceGradient: LinearGradient {
+        let colors: [Color] = isLight
+            ? [
+                .white.opacity(reduceTransparency ? 1 : 0.94),
+                Color(red: 0.88, green: 0.94, blue: 1).opacity(reduceTransparency ? 1 : 0.84),
+                .white.opacity(reduceTransparency ? 1 : 0.88)
+            ]
+            : [
+                Color(red: 0.04, green: 0.06, blue: 0.1).opacity(reduceTransparency ? 1 : 0.94),
+                Color(red: 0.08, green: 0.16, blue: 0.27).opacity(reduceTransparency ? 1 : 0.9),
+                Color(red: 0.025, green: 0.035, blue: 0.06).opacity(reduceTransparency ? 1 : 0.96)
+            ]
+        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    private var borderGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                .white.opacity(isLight ? 0.96 : 0.34),
+                quotaColor.opacity(isLight ? 0.18 : 0.3),
+                .white.opacity(isLight ? 0.58 : 0.12)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
