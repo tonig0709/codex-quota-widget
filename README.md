@@ -43,6 +43,10 @@ choose **编辑小组件**, then turn **浅色外观** on for light or off for d
 The widget gallery offers both a detailed large widget and a small circular
 remaining-quota widget.
 
+When upgrading from v0.3.0 or earlier, remove the old desktop widget once and
+add it again. v0.3.1 uses a fresh WidgetKit identifier to discard the cached
+configuration schema that caused blank widgets and hid the small size.
+
 No Terminal is normally required. If macOS still reports that the app cannot be
 opened after Control-clicking **Open**, remove only the downloaded app's
 quarantine attribute, then open it again:

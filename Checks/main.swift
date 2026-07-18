@@ -14,5 +14,6 @@ precondition(QuotaLevel(remainingPercent: 60) == .healthy)
 precondition(QuotaLevel(remainingPercent: 30) == .warning)
 precondition(QuotaLevel(remainingPercent: 29) == .critical)
 precondition(UsageSnapshot.placeholder.resolvedAppearance == .dark)
+precondition(SnapshotStore.widgetKind == "dev.codexquota.widget.v2")
 
 print("Quota parser and threshold checks passed.")

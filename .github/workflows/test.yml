@@ -19,6 +19,13 @@ jobs:
             -derivedDataPath "$PWD/build" \
             CODE_SIGNING_ALLOWED=NO \
             clean build
+      - name: Check widget configuration metadata
+        run: |
+          widget="$PWD/build/Build/Products/Release/Codex Quota.app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          metadata="$widget/Contents/Resources/Metadata.appintents/extract.actionsdata"
+          plutil -convert json -o - "$metadata" | grep 'AppearanceV2ConfigurationIntent'
+          plutil -convert json -o - "$metadata" | grep 'useLightAppearance'
+          strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.v2'
       - name: Check local snapshot bridge
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"

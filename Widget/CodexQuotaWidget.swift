@@ -3,8 +3,9 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-struct AppearanceConfigurationIntent: WidgetConfigurationIntent {
+struct AppearanceV2ConfigurationIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "显示设置"
+    static var description = IntentDescription("选择此小组件的深色或浅色外观。")
 
     @Parameter(title: "浅色外观", default: false)
     var useLightAppearance: Bool
@@ -22,16 +23,16 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
         CodexQuotaEntry(date: .now, snapshot: .placeholder)
     }
 
-    func snapshot(for configuration: AppearanceConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
+    func snapshot(for configuration: AppearanceV2ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
         await entry(for: configuration)
     }
 
-    func timeline(for configuration: AppearanceConfigurationIntent, in context: Context) async -> Timeline<CodexQuotaEntry> {
+    func timeline(for configuration: AppearanceV2ConfigurationIntent, in context: Context) async -> Timeline<CodexQuotaEntry> {
         let entry = await entry(for: configuration)
         return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(5 * 60)))
     }
 
-    private func entry(for configuration: AppearanceConfigurationIntent) async -> CodexQuotaEntry {
+    private func entry(for configuration: AppearanceV2ConfigurationIntent) async -> CodexQuotaEntry {
         var snapshot = await loadSnapshot()
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
         return CodexQuotaEntry(date: .now, snapshot: snapshot)
@@ -39,7 +40,7 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
 
     private func loadSnapshot() async -> UsageSnapshot {
         var request = URLRequest(url: snapshotURL)
-        request.timeoutInterval = 1
+        request.timeoutInterval = 2
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let response = response as? HTTPURLResponse,
               response.statusCode == 200,
@@ -73,7 +74,7 @@ struct CodexQuotaWidget: Widget {
     let kind = SnapshotStore.widgetKind
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: AppearanceConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: AppearanceV2ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
             CodexQuotaWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Codex Quota")

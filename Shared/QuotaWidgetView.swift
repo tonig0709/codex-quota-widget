@@ -172,7 +172,6 @@ public struct QuotaRingWidgetView: View {
     private var remaining: Int { snapshot.weekly?.remainingPercent ?? 0 }
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
     private var primaryText: Color { isLight ? Color(red: 0.08, green: 0.1, blue: 0.14) : .white }
-    private var secondaryText: Color { isLight ? .black.opacity(0.52) : .white.opacity(0.56) }
     private var trackColor: Color { isLight ? .black.opacity(0.09) : .white.opacity(0.14) }
     private var quotaColor: Color {
         switch QuotaLevel(remainingPercent: remaining) {
@@ -183,30 +182,27 @@ public struct QuotaRingWidgetView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 7) {
             ZStack {
-                Circle().stroke(trackColor, lineWidth: 12)
+                Circle().stroke(trackColor, lineWidth: 10)
                 Circle()
                     .trim(from: 0, to: CGFloat(remaining) / 100)
-                    .stroke(quotaColor.gradient, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .stroke(quotaColor.gradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Image("CodexMark")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 42, height: 42)
+                    .frame(width: 34, height: 34)
                     .accessibilityHidden(true)
             }
-            .frame(width: 104, height: 104)
+            .frame(width: 82, height: 82)
 
             Text("\(remaining)%")
-                .font(.system(size: 44, weight: .semibold, design: .rounded))
+                .font(.system(size: 38, weight: .semibold, design: .rounded))
                 .tracking(-1.8)
                 .monospacedDigit()
-            Text("周额度剩余")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(secondaryText)
         }
-        .padding(18)
+        .padding(14)
         .foregroundStyle(primaryText)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
