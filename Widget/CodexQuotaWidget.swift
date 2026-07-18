@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import WidgetKit
 
@@ -7,17 +8,34 @@ struct CodexQuotaEntry: TimelineEntry {
 }
 
 struct CodexQuotaProvider: TimelineProvider {
+    private let snapshotURL = URL(string: "http://127.0.0.1:48193/snapshot")!
+
     func placeholder(in context: Context) -> CodexQuotaEntry {
         CodexQuotaEntry(date: .now, snapshot: .placeholder)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (CodexQuotaEntry) -> Void) {
-        completion(CodexQuotaEntry(date: .now, snapshot: SnapshotStore.load()))
+        load { completion(CodexQuotaEntry(date: .now, snapshot: $0)) }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CodexQuotaEntry>) -> Void) {
-        let entry = CodexQuotaEntry(date: .now, snapshot: SnapshotStore.load())
-        completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(15 * 60))))
+        load { snapshot in
+            let entry = CodexQuotaEntry(date: .now, snapshot: snapshot)
+            completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(15 * 60))))
+        }
+    }
+
+    private func load(completion: @escaping (UsageSnapshot) -> Void) {
+        var request = URLRequest(url: snapshotURL)
+        request.timeoutInterval = 2
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data, let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) else {
+                completion(SnapshotStore.load())
+                return
+            }
+            SnapshotStore.save(snapshot)
+            completion(snapshot)
+        }.resume()
     }
 }
 
