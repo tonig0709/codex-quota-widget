@@ -1,0 +1,57 @@
+name: Release macOS app
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app and widget
+        run: |
+          xcodebuild \
+            -project CodexQuotaWidget.xcodeproj \
+            -scheme CodexQuota \
+            -configuration Release \
+            -derivedDataPath "$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Apply ad-hoc signature
+        run: |
+          app="$PWD/build/Build/Products/Release/Codex Quota.app"
+          widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+
+          /usr/bin/codesign --force --sign - \
+            --entitlements Widget/CodexQuotaWidget.entitlements \
+            "$widget"
+          /usr/bin/codesign --force --sign - \
+            --entitlements App/CodexQuota.entitlements \
+            "$app"
+          /usr/bin/codesign --verify --deep --strict "$app"
+
+      - name: Package app
+        run: |
+          archive="Codex-Quota-${GITHUB_REF_NAME}-macOS.zip"
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent \
+            "$PWD/build/Build/Products/Release/Codex Quota.app" \
+            "$archive"
+          shasum -a 256 "$archive" > "$archive.sha256"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          archive="Codex-Quota-${GITHUB_REF_NAME}-macOS.zip"
+          gh release create "$GITHUB_REF_NAME" \
+            "$archive" \
+            "$archive.sha256" \
+            --title "Codex Quota ${GITHUB_REF_NAME}" \
+            --generate-notes

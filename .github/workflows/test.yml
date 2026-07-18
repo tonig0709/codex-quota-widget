@@ -10,3 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift run quota-self-check
+      - name: Build macOS app and widget
+        run: |
+          xcodebuild \
+            -project CodexQuotaWidget.xcodeproj \
+            -scheme CodexQuota \
+            -configuration Release \
+            -derivedDataPath "$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
