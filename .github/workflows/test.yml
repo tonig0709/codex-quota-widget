@@ -30,3 +30,12 @@ jobs:
           grep '"dailyUsage"' /tmp/snapshot.json
           grep '"appearance":"dark"' /tmp/snapshot.json
           ! grep -E '"email"|"plan"' /tmp/snapshot.json
+      - name: Package DMG
+        run: |
+          app="$PWD/build/Build/Products/Release/Codex Quota.app"
+          mkdir "$PWD/dmg-root"
+          /usr/bin/ditto "$app" "$PWD/dmg-root/Codex Quota.app"
+          ln -s /Applications "$PWD/dmg-root/Applications"
+          hdiutil create -volname "Codex Quota" -srcfolder "$PWD/dmg-root" \
+            -ov -format UDZO "$PWD/Codex-Quota-test.dmg"
+          hdiutil verify "$PWD/Codex-Quota-test.dmg"

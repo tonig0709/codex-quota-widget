@@ -40,18 +40,29 @@ jobs:
       - name: Package app
         run: |
           archive="Codex-Quota-${GITHUB_REF_NAME}-macOS.zip"
+          dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
+          checksums="Codex-Quota-${GITHUB_REF_NAME}-checksums.txt"
           /usr/bin/ditto -c -k --sequesterRsrc --keepParent \
             "$PWD/build/Build/Products/Release/Codex Quota.app" \
             "$archive"
-          shasum -a 256 "$archive" > "$archive.sha256"
+          mkdir "$PWD/dmg-root"
+          /usr/bin/ditto "$PWD/build/Build/Products/Release/Codex Quota.app" \
+            "$PWD/dmg-root/Codex Quota.app"
+          ln -s /Applications "$PWD/dmg-root/Applications"
+          hdiutil create -volname "Codex Quota" -srcfolder "$PWD/dmg-root" \
+            -ov -format UDZO "$dmg"
+          shasum -a 256 "$archive" "$dmg" > "$checksums"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           archive="Codex-Quota-${GITHUB_REF_NAME}-macOS.zip"
+          dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
+          checksums="Codex-Quota-${GITHUB_REF_NAME}-checksums.txt"
           gh release create "$GITHUB_REF_NAME" \
             "$archive" \
-            "$archive.sha256" \
+            "$dmg" \
+            "$checksums" \
             --title "Codex Quota ${GITHUB_REF_NAME}" \
             --generate-notes
