@@ -22,11 +22,30 @@ also requests a fallback refresh every 15 minutes.
 ## Requirements
 
 - macOS 14 or newer
-- Xcode 16 or newer
 - Codex CLI, or ChatGPT for Mac with its bundled Codex binary
 - A personal Codex-compatible ChatGPT account
 
-## Build
+## Install a release
+
+1. Open [Releases](https://github.com/tonig0709/codex-quota-widget/releases)
+   and download `Codex-Quota-<version>-macOS.zip`.
+2. Unzip it and drag **Codex Quota.app** into `/Applications`.
+3. On first launch, Control-click the app and choose **Open**. The public build
+   is ad-hoc signed because this open-source repository does not contain an
+   Apple Developer ID certificate.
+4. Keep **Codex Quota** running in the menu bar, then Control-click the desktop,
+   choose **Edit Widgets**, and add **Codex Quota**.
+
+If macOS still reports that the app cannot be opened, remove only the downloaded
+app's quarantine attribute, then open it again:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Codex Quota.app"
+```
+
+## Build from source
+
+Building from source requires Xcode 16 or newer.
 
 1. Open `CodexQuotaWidget.xcodeproj` in Xcode.
 2. Select your Apple development team for the app and widget targets.
