@@ -73,7 +73,6 @@ public enum QuotaLevel: Equatable, Sendable {
 }
 
 public enum SnapshotStore {
-    public static let appGroup = "group.dev.codexquota.widget"
     private static let key = "usageSnapshot"
 
     public static func load(defaults: UserDefaults = sharedDefaults) -> UsageSnapshot {
@@ -89,6 +88,6 @@ public enum SnapshotStore {
     }
 
     public static var sharedDefaults: UserDefaults {
-        UserDefaults(suiteName: appGroup) ?? .standard
+        .standard
     }
 }

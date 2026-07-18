@@ -19,3 +19,11 @@ jobs:
             -derivedDataPath "$PWD/build" \
             CODE_SIGNING_ALLOWED=NO \
             clean build
+      - name: Check local snapshot bridge
+        run: |
+          app="$PWD/build/Build/Products/Release/Codex Quota.app"
+          "$app/Contents/MacOS/Codex Quota" >/tmp/codex-quota.log 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          curl --fail --retry 10 --retry-delay 1 --retry-connrefused \
+            http://127.0.0.1:48193/snapshot | grep '"dailyUsage"'

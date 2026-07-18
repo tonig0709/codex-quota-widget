@@ -49,10 +49,8 @@ Building from source requires Xcode 16 or newer.
 
 1. Open `CodexQuotaWidget.xcodeproj` in Xcode.
 2. Select your Apple development team for the app and widget targets.
-3. If needed, change `group.dev.codexquota.widget` in both entitlement files and
-   in `Shared/UsageSnapshot.swift` to an App Group registered to your team.
-4. Run the `CodexQuota` scheme.
-5. In macOS, open the widget gallery and add **Codex Quota**.
+3. Run the `CodexQuota` scheme.
+4. In macOS, open the widget gallery and add **Codex Quota**.
 
 The first launch reuses an existing Codex CLI login. If no account is connected,
 Codex opens its own browser login flow.
@@ -66,7 +64,7 @@ swift run quota-self-check
 ## Data flow
 
 ```text
-Codex account → local codex app-server → menu bar app → App Group snapshot → WidgetKit
+Codex account → local codex app-server → menu bar app → localhost snapshot → WidgetKit
 ```
 
 ## Independence and trademarks

@@ -1,7 +1,33 @@
 import AppKit
 import Combine
 import Foundation
+import Network
 import WidgetKit
+
+private final class SnapshotServer {
+    static let port: NWEndpoint.Port = 48_193
+
+    private let queue = DispatchQueue(label: "dev.codexquota.snapshot")
+    private var listener: NWListener?
+
+    func start() {
+        guard listener == nil else { return }
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: Self.port)
+        guard let listener = try? NWListener(using: parameters) else { return }
+        listener.newConnectionHandler = { [queue] connection in
+            connection.start(queue: queue)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { _, _, _, _ in
+                let body = (try? JSONEncoder().encode(SnapshotStore.load())) ?? Data()
+                var response = Data("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n".utf8)
+                response.append(body)
+                connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+            }
+        }
+        listener.start(queue: queue)
+        self.listener = listener
+    }
+}
 
 @MainActor
 final class CodexAppServer: ObservableObject {
@@ -20,6 +46,11 @@ final class CodexAppServer: ObservableObject {
     private var input: FileHandle?
     private var outputBuffer = Data()
     private var refreshTimer: Timer?
+    private let snapshotServer = SnapshotServer()
+
+    init() {
+        snapshotServer.start()
+    }
 
     func connect() {
         guard process == nil else { refresh() ; return }
