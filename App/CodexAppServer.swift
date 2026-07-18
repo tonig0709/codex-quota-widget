@@ -17,9 +17,15 @@ private final class SnapshotServer {
         guard let listener = try? NWListener(using: parameters) else { return }
         listener.newConnectionHandler = { [queue] connection in
             connection.start(queue: queue)
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { _, _, _, _ in
-                let body = (try? JSONEncoder().encode(SnapshotStore.load())) ?? Data()
-                var response = Data("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n".utf8)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { data, _, _, _ in
+                let request = data.flatMap { String(data: $0, encoding: .utf8) }
+                let valid = request?.hasPrefix("GET /snapshot HTTP/1.") == true
+                var snapshot = SnapshotStore.load()
+                snapshot.email = nil
+                snapshot.plan = nil
+                let body = valid ? ((try? JSONEncoder().encode(snapshot)) ?? Data()) : Data()
+                let status = valid ? "200 OK" : "404 Not Found"
+                var response = Data("HTTP/1.1 \(status)\r\nContent-Type: application/json\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n".utf8)
                 response.append(body)
                 connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
             }
@@ -92,10 +98,10 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.1.0"
+                    "version": "0.2.0"
                 ]
             ])
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
                 Task { @MainActor in self?.refresh() }
             }
         } catch {
@@ -117,6 +123,12 @@ final class CodexAppServer: ObservableObject {
         guard process != nil else { connect(); return }
         send(method: "account/rateLimits/read", id: 3)
         send(method: "account/usage/read", id: 4)
+    }
+
+    func setAppearance(_ appearance: WidgetAppearance) {
+        guard snapshot.resolvedAppearance != appearance else { return }
+        snapshot.appearance = appearance
+        persist()
     }
 
     private func consume(_ data: Data) {
@@ -200,7 +212,7 @@ final class CodexAppServer: ObservableObject {
     private func persist() {
         snapshot.updatedAt = .now
         SnapshotStore.save(snapshot)
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.widgetKind)
     }
 
     private func send(method: String, id: Int? = nil, params: [String: Any]? = nil) {

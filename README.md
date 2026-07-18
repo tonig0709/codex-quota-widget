@@ -16,8 +16,9 @@ The app launches the locally installed `codex app-server`, then uses the public
 Codex. This app does not receive or persist OAuth tokens.
 
 Rate-limit notifications trigger an immediate refresh while the menu bar app is
-running. WidgetKit still controls the final desktop refresh schedule; the widget
-also requests a fallback refresh every 15 minutes.
+running. The app also polls every 30 seconds and asks WidgetKit to reload only
+this widget. WidgetKit still controls the final desktop refresh schedule; the
+widget requests a five-minute fallback refresh.
 
 ## Requirements
 
@@ -35,6 +36,9 @@ also requests a fallback refresh every 15 minutes.
    Apple Developer ID certificate.
 4. Keep **Codex Quota** running in the menu bar, then Control-click the desktop,
    choose **Edit Widgets**, and add **Codex Quota**.
+
+Use the segmented **深色 / 浅色** control in the app to change both the app
+preview and desktop widget appearance.
 
 If macOS still reports that the app cannot be opened, remove only the downloaded
 app's quarantine attribute, then open it again:

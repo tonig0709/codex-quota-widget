@@ -26,4 +26,7 @@ jobs:
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           curl --fail --retry 10 --retry-delay 1 --retry-connrefused \
-            http://127.0.0.1:48193/snapshot | grep '"dailyUsage"'
+            http://127.0.0.1:48193/snapshot -o /tmp/snapshot.json
+          grep '"dailyUsage"' /tmp/snapshot.json
+          grep '"appearance":"dark"' /tmp/snapshot.json
+          ! grep -E '"email"|"plan"' /tmp/snapshot.json

@@ -1,5 +1,12 @@
 import Foundation
 
+public enum WidgetAppearance: String, Codable, CaseIterable, Identifiable, Sendable {
+    case dark, light
+
+    public var id: Self { self }
+    public var title: String { self == .dark ? "深色" : "浅色" }
+}
+
 public struct UsageWindow: Codable, Equatable, Sendable {
     public var usedPercent: Int
     public var windowDurationMinutes: Int?
@@ -32,6 +39,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
     public var dailyUsage: [DailyUsage]
     public var email: String?
     public var plan: String?
+    public var appearance: WidgetAppearance?
     public var updatedAt: Date
 
     public init(
@@ -39,14 +47,18 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
         dailyUsage: [DailyUsage] = [],
         email: String? = nil,
         plan: String? = nil,
+        appearance: WidgetAppearance = .dark,
         updatedAt: Date = .now
     ) {
         self.weekly = weekly
         self.dailyUsage = dailyUsage
         self.email = email
         self.plan = plan
+        self.appearance = appearance
         self.updatedAt = updatedAt
     }
+
+    public var resolvedAppearance: WidgetAppearance { appearance ?? .dark }
 
     public static let placeholder = UsageSnapshot(
         weekly: UsageWindow(usedPercent: 28, windowDurationMinutes: 10_080, resetsAt: nil),
@@ -73,6 +85,7 @@ public enum QuotaLevel: Equatable, Sendable {
 }
 
 public enum SnapshotStore {
+    public static let widgetKind = "dev.codexquota.widget"
     private static let key = "usageSnapshot"
 
     public static func load(defaults: UserDefaults = sharedDefaults) -> UsageSnapshot {

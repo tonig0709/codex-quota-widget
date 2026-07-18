@@ -4,14 +4,25 @@ struct DashboardView: View {
     @ObservedObject var server: CodexAppServer
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
             QuotaWidgetView(snapshot: server.snapshot)
                 .frame(width: 680, height: 300)
 
-            HStack {
+            HStack(spacing: 12) {
                 Label(statusText, systemImage: statusIcon)
                     .foregroundStyle(statusColor)
+                    .font(.callout.weight(.medium))
                 Spacer()
+
+                Picker("外观", selection: appearance) {
+                    ForEach(WidgetAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 132)
+
                 Button("刷新") { server.refresh() }
                     .disabled(server.state == .connecting)
                 if case .disconnected = server.state {
@@ -19,11 +30,20 @@ struct DashboardView: View {
                         .buttonStyle(.borderedProminent)
                 }
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .padding(24)
-        .frame(minWidth: 730, minHeight: 380)
+        .frame(minWidth: 730, minHeight: 400)
         .task { server.connect() }
+    }
+
+    private var appearance: Binding<WidgetAppearance> {
+        Binding(
+            get: { server.snapshot.resolvedAppearance },
+            set: { server.setAppearance($0) }
+        )
     }
 
     private var statusText: String {
