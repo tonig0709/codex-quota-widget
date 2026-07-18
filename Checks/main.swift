@@ -13,5 +13,6 @@ precondition(usage == [DailyUsage(startDate: "2026-07-17", tokens: 12_500_000)])
 precondition(QuotaLevel(remainingPercent: 60) == .healthy)
 precondition(QuotaLevel(remainingPercent: 30) == .warning)
 precondition(QuotaLevel(remainingPercent: 29) == .critical)
+precondition(UsageSnapshot.placeholder.resolvedAppearance == .dark)
 
 print("Quota parser and threshold checks passed.")

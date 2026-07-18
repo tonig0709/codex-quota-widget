@@ -21,15 +21,19 @@ struct CodexQuotaProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<CodexQuotaEntry>) -> Void) {
         load { snapshot in
             let entry = CodexQuotaEntry(date: .now, snapshot: snapshot)
-            completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(15 * 60))))
+            completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(5 * 60))))
         }
     }
 
     private func load(completion: @escaping (UsageSnapshot) -> Void) {
         var request = URLRequest(url: snapshotURL)
-        request.timeoutInterval = 2
-        URLSession.shared.dataTask(with: request) { data, _, _ in
-            guard let data, let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) else {
+        request.timeoutInterval = 1
+        URLSession.shared.dataTask(with: request) { data, response, _ in
+            guard let response = response as? HTTPURLResponse,
+                  response.statusCode == 200,
+                  response.mimeType == "application/json",
+                  let data,
+                  let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) else {
                 completion(SnapshotStore.load())
                 return
             }
@@ -40,7 +44,7 @@ struct CodexQuotaProvider: TimelineProvider {
 }
 
 struct CodexQuotaWidget: Widget {
-    let kind = "dev.codexquota.widget"
+    let kind = SnapshotStore.widgetKind
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: CodexQuotaProvider()) { entry in
