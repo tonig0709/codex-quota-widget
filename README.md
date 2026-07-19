@@ -37,7 +37,7 @@ No Terminal is needed for normal use. If macOS still blocks the app after the
 Control-click **Open** step, remove quarantine from the installed copy only:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Codex Quota.app"
+xattr -dr com.apple.quarantine /Applications/Codex\ Quota.app 
 ```
 
 ### Updating from an older version
