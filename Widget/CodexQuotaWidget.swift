@@ -12,9 +12,9 @@ struct AppearanceV3ConfigurationIntent: WidgetConfigurationIntent {
 
     @Parameter(
         title: "玻璃不透明度",
-        default: WidgetGlassOpacity.defaultValue,
+        default: 0.86,
         controlStyle: .slider,
-        inclusiveRange: WidgetGlassOpacity.minimum...WidgetGlassOpacity.maximum
+        inclusiveRange: (lowerBound: 0.35, upperBound: 1.0)
     )
     var glassOpacity: Double
 }
