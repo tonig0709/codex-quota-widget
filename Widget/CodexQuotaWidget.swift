@@ -5,22 +5,31 @@ import WidgetKit
 
 struct AppearanceV3ConfigurationIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "显示设置"
-    static var description = IntentDescription("选择此小组件的深色或浅色外观。")
+    static var description = IntentDescription("选择此小组件的深浅色外观与玻璃不透明度。")
 
     @Parameter(title: "浅色外观", default: false)
     var useLightAppearance: Bool
+
+    @Parameter(
+        title: "玻璃不透明度",
+        default: 0.86,
+        controlStyle: .slider,
+        inclusiveRange: (lowerBound: 0.35, upperBound: 1.0)
+    )
+    var glassOpacity: Double
 }
 
 struct CodexQuotaEntry: TimelineEntry {
     let date: Date
     let snapshot: UsageSnapshot
+    let glassOpacity: Double
 }
 
 struct CodexQuotaProvider: AppIntentTimelineProvider {
     private let snapshotURL = URL(string: "http://127.0.0.1:48193/snapshot")!
 
     func placeholder(in context: Context) -> CodexQuotaEntry {
-        CodexQuotaEntry(date: .now, snapshot: .placeholder)
+        CodexQuotaEntry(date: .now, snapshot: .placeholder, glassOpacity: WidgetGlassOpacity.defaultValue)
     }
 
     func snapshot(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
@@ -38,13 +47,13 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     private func previewEntry(for configuration: AppearanceV3ConfigurationIntent) -> CodexQuotaEntry {
         var snapshot = UsageSnapshot.placeholder
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return CodexQuotaEntry(date: .now, snapshot: snapshot)
+        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
     private func entry(for configuration: AppearanceV3ConfigurationIntent) async -> CodexQuotaEntry {
         var snapshot = await loadSnapshot()
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return CodexQuotaEntry(date: .now, snapshot: snapshot)
+        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
     private func loadSnapshot() async -> UsageSnapshot {
@@ -65,7 +74,7 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
 struct SmallCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.smallWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            QuotaRingWidgetView(snapshot: entry.snapshot)
+            QuotaRingWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
                 .containerBackground(for: .widget) { Color.clear }
         }
         .configurationDisplayName("Codex Quota · 小型")
@@ -78,7 +87,7 @@ struct SmallCodexQuotaWidget: Widget {
 struct LargeCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.largeWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            QuotaWidgetView(snapshot: entry.snapshot)
+            QuotaWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
                 .containerBackground(for: .widget) { Color.clear }
         }
         .configurationDisplayName("Codex Quota · 大型")

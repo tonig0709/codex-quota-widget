@@ -84,6 +84,16 @@ public enum QuotaLevel: Equatable, Sendable {
     }
 }
 
+public enum WidgetGlassOpacity {
+    public static let minimum = 0.35
+    public static let maximum = 1.0
+    public static let defaultValue = 0.86
+
+    public static func clamped(_ value: Double) -> Double {
+        min(maximum, max(minimum, value))
+    }
+}
+
 public enum SnapshotStore {
     public static let smallWidgetKind = "dev.codexquota.widget.small.v3"
     public static let largeWidgetKind = "dev.codexquota.widget.large.v3"

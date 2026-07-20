@@ -3,10 +3,12 @@ import SwiftUI
 
 public struct QuotaWidgetView: View {
     public let snapshot: UsageSnapshot
+    public let glassOpacity: Double
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    public init(snapshot: UsageSnapshot) { self.snapshot = snapshot }
+    public init(snapshot: UsageSnapshot, glassOpacity: Double = WidgetGlassOpacity.defaultValue) {
+        self.snapshot = snapshot
+        self.glassOpacity = WidgetGlassOpacity.clamped(glassOpacity)
+    }
 
     private var remaining: Int { snapshot.weekly?.remainingPercent ?? 0 }
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
@@ -108,48 +110,10 @@ public struct QuotaWidgetView: View {
         .padding(22)
         .foregroundStyle(primaryText)
         .background {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(surfaceGradient)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .strokeBorder(borderGradient, lineWidth: 1)
-                }
-                .overlay(alignment: .top) {
-                    Capsule()
-                        .fill(.white.opacity(isLight ? 0.72 : 0.24))
-                        .frame(height: 1)
-                        .padding(.horizontal, 42)
-                }
+            LiquidGlassSurface(isLight: isLight, opacity: glassOpacity, accent: chartColor)
         }
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .accessibilityElement(children: .contain)
-    }
-
-    private var surfaceGradient: LinearGradient {
-        let colors: [Color] = isLight
-            ? [
-                .white.opacity(reduceTransparency ? 1 : 0.94),
-                Color(red: 0.88, green: 0.94, blue: 1).opacity(reduceTransparency ? 1 : 0.84),
-                .white.opacity(reduceTransparency ? 1 : 0.88)
-            ]
-            : [
-                Color(red: 0.04, green: 0.06, blue: 0.1).opacity(reduceTransparency ? 1 : 0.94),
-                Color(red: 0.08, green: 0.16, blue: 0.27).opacity(reduceTransparency ? 1 : 0.9),
-                Color(red: 0.025, green: 0.035, blue: 0.06).opacity(reduceTransparency ? 1 : 0.96)
-            ]
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
-    private var borderGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                .white.opacity(isLight ? 0.96 : 0.34),
-                chartColor.opacity(isLight ? 0.18 : 0.3),
-                .white.opacity(isLight ? 0.58 : 0.12)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 
     private var resetText: String {
@@ -164,10 +128,12 @@ public struct QuotaWidgetView: View {
 
 public struct QuotaRingWidgetView: View {
     public let snapshot: UsageSnapshot
+    public let glassOpacity: Double
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    public init(snapshot: UsageSnapshot) { self.snapshot = snapshot }
+    public init(snapshot: UsageSnapshot, glassOpacity: Double = WidgetGlassOpacity.defaultValue) {
+        self.snapshot = snapshot
+        self.glassOpacity = WidgetGlassOpacity.clamped(glassOpacity)
+    }
 
     private var remaining: Int { snapshot.weekly?.remainingPercent ?? 0 }
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
@@ -206,46 +172,64 @@ public struct QuotaRingWidgetView: View {
         .foregroundStyle(primaryText)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(surfaceGradient)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .strokeBorder(borderGradient, lineWidth: 1)
-                }
-                .overlay(alignment: .top) {
-                    Capsule()
-                        .fill(.white.opacity(isLight ? 0.72 : 0.24))
-                        .frame(height: 1)
-                        .padding(.horizontal, 34)
-                }
+            LiquidGlassSurface(isLight: isLight, opacity: glassOpacity, accent: quotaColor)
         }
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Codex 周额度剩余 \(remaining)%")
     }
 
+}
+
+private struct LiquidGlassSurface: View {
+    let isLight: Bool
+    let opacity: Double
+    let accent: Color
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    private var resolvedOpacity: Double { reduceTransparency ? 1 : WidgetGlassOpacity.clamped(opacity) }
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 30, style: .continuous)
+            .fill(surfaceGradient)
+            .overlay {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .strokeBorder(borderGradient, lineWidth: 1)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            .strokeBorder(.white.opacity(isLight ? 0.42 : 0.16), lineWidth: 0.55)
+                            .blur(radius: 0.45)
+                    }
+            }
+            .overlay {
+                RadialGradient(
+                    colors: [.white.opacity(isLight ? 0.36 : 0.14), .clear],
+                    center: .topLeading,
+                    startRadius: 5,
+                    endRadius: 155
+                )
+                .blendMode(.screen)
+            }
+            .overlay(alignment: .top) {
+                Capsule()
+                    .fill(.white.opacity(isLight ? 0.72 : 0.28))
+                    .frame(height: 1)
+                    .padding(.horizontal, 34)
+                    .padding(.top, 0.5)
+            }
+    }
+
     private var surfaceGradient: LinearGradient {
         let colors: [Color] = isLight
-            ? [
-                .white.opacity(reduceTransparency ? 1 : 0.94),
-                Color(red: 0.88, green: 0.94, blue: 1).opacity(reduceTransparency ? 1 : 0.84),
-                .white.opacity(reduceTransparency ? 1 : 0.88)
-            ]
-            : [
-                Color(red: 0.04, green: 0.06, blue: 0.1).opacity(reduceTransparency ? 1 : 0.94),
-                Color(red: 0.08, green: 0.16, blue: 0.27).opacity(reduceTransparency ? 1 : 0.9),
-                Color(red: 0.025, green: 0.035, blue: 0.06).opacity(reduceTransparency ? 1 : 0.96)
-            ]
+            ? [.white.opacity(0.94 * resolvedOpacity), Color(red: 0.88, green: 0.94, blue: 1).opacity(0.84 * resolvedOpacity), .white.opacity(0.88 * resolvedOpacity)]
+            : [Color(red: 0.04, green: 0.06, blue: 0.1).opacity(0.94 * resolvedOpacity), Color(red: 0.08, green: 0.16, blue: 0.27).opacity(0.9 * resolvedOpacity), Color(red: 0.025, green: 0.035, blue: 0.06).opacity(0.96 * resolvedOpacity)]
         return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
     private var borderGradient: LinearGradient {
         LinearGradient(
-            colors: [
-                .white.opacity(isLight ? 0.96 : 0.34),
-                quotaColor.opacity(isLight ? 0.18 : 0.3),
-                .white.opacity(isLight ? 0.58 : 0.12)
-            ],
+            colors: [.white.opacity(isLight ? 0.96 : 0.38), accent.opacity(isLight ? 0.22 : 0.34), .white.opacity(isLight ? 0.58 : 0.14)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
