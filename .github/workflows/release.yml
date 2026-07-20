@@ -11,8 +11,37 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      SIGNED_RELEASE: ${{ secrets.DEVELOPER_ID_APPLICATION != '' && secrets.DEVELOPER_TEAM_ID != '' && secrets.BUILD_CERTIFICATE_BASE64 != '' && secrets.P12_PASSWORD != '' && secrets.KEYCHAIN_PASSWORD != '' && secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER_ID != '' && secrets.APPLE_API_KEY_BASE64 != '' }}
+      ANY_SIGNING_SECRET: ${{ secrets.DEVELOPER_ID_APPLICATION != '' || secrets.DEVELOPER_TEAM_ID != '' || secrets.BUILD_CERTIFICATE_BASE64 != '' || secrets.P12_PASSWORD != '' || secrets.KEYCHAIN_PASSWORD != '' || secrets.APPLE_API_KEY_ID != '' || secrets.APPLE_API_ISSUER_ID != '' || secrets.APPLE_API_KEY_BASE64 != '' }}
+      DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+      APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Reject incomplete signing configuration
+        if: env.ANY_SIGNING_SECRET == 'true' && env.SIGNED_RELEASE != 'true'
+        run: |
+          echo "Signing secrets are only partially configured. Add all documented secrets or remove the incomplete set."
+          exit 1
+
+      - name: Install Developer ID certificate
+        if: env.SIGNED_RELEASE == 'true'
+        run: |
+          certificate="$RUNNER_TEMP/certificate.p12"
+          keychain="$RUNNER_TEMP/build.keychain-db"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$certificate"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security import "$certificate" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security list-keychain -d user -s "$keychain"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$keychain"
 
       - name: Build app and widget
         run: |
@@ -24,44 +53,76 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             clean build
 
-      - name: Apply ad-hoc signature
+      - name: Apply Developer ID signature
+        if: env.SIGNED_RELEASE == 'true'
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"
           widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          codesign --force --options runtime --timestamp \
+            --sign "$DEVELOPER_ID_APPLICATION" \
+            --entitlements Widget/CodexQuotaWidget.entitlements "$widget"
+          codesign --force --options runtime --timestamp \
+            --sign "$DEVELOPER_ID_APPLICATION" \
+            --entitlements App/CodexQuota.entitlements "$app"
 
-          /usr/bin/codesign --force --sign - \
-            --entitlements Widget/CodexQuotaWidget.entitlements \
-            "$widget"
-          /usr/bin/codesign --force --sign - \
-            --entitlements App/CodexQuota.entitlements \
-            "$app"
-          /usr/bin/codesign --verify --deep --strict "$app"
+      - name: Apply ad-hoc signature
+        if: env.SIGNED_RELEASE != 'true'
+        run: |
+          app="$PWD/build/Build/Products/Release/Codex Quota.app"
+          widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          codesign --force --sign - \
+            --entitlements Widget/CodexQuotaWidget.entitlements "$widget"
+          codesign --force --sign - \
+            --entitlements App/CodexQuota.entitlements "$app"
+
+      - name: Verify app signature
+        run: |
+          app="$PWD/build/Build/Products/Release/Codex Quota.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign --display --verbose=4 "$app"
 
       - name: Package app
         run: |
-          archive="Codex-Quota-${GITHUB_REF_NAME}-macOS.zip"
           dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
-          checksums="Codex-Quota-${GITHUB_REF_NAME}-checksums.txt"
-          /usr/bin/ditto -c -k --sequesterRsrc --keepParent \
-            "$PWD/build/Build/Products/Release/Codex Quota.app" \
-            "$archive"
           mkdir "$PWD/dmg-root"
           /usr/bin/ditto "$PWD/build/Build/Products/Release/Codex Quota.app" \
             "$PWD/dmg-root/Codex Quota.app"
           ln -s /Applications "$PWD/dmg-root/Applications"
           hdiutil create -volname "Codex Quota" -srcfolder "$PWD/dmg-root" \
             -ov -format UDZO "$dmg"
-          shasum -a 256 "$archive" "$dmg" > "$checksums"
+
+      - name: Notarize and staple DMG
+        if: env.SIGNED_RELEASE == 'true'
+        run: |
+          key="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$key"
+          xcrun notarytool submit "$dmg" --key "$key" \
+            --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID" --wait
+          xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
+          spctl -a -vvv -t open "$dmg"
+
+      - name: Record signing status
+        run: |
+          if [ "$SIGNED_RELEASE" = "true" ]; then
+            echo "### Developer ID signed and Apple-notarized" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Ad-hoc signed; first launch requires Control-click → Open" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Create checksum
+        run: |
+          dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
+          shasum -a 256 "$dmg" > "Codex-Quota-${GITHUB_REF_NAME}-checksums.txt"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          archive="Codex-Quota-${GITHUB_REF_NAME}-macOS.zip"
           dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
           checksums="Codex-Quota-${GITHUB_REF_NAME}-checksums.txt"
           gh release create "$GITHUB_REF_NAME" \
-            "$archive" \
             "$dmg" \
             "$checksums" \
             --title "Codex Quota ${GITHUB_REF_NAME}" \

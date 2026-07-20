@@ -3,16 +3,16 @@
 A native macOS menu bar app and desktop widget for checking your Codex weekly
 quota and seven-day Token usage at a glance.
 
-**Latest release: [v0.3.2](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.3.2)** ·
-[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.3.2/Codex-Quota-v0.3.2-macOS.dmg)
+**Latest release: [v0.4.0](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.4.0)** ·
+[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.4.0/Codex-Quota-v0.4.0-macOS.dmg)
 
 ## What it shows
 
 - **Codex Quota · 小型** — a compact circular remaining-quota gauge with the
   Codex mark at its center.
 - **Codex Quota · 大型** — weekly remaining quota plus a seven-day Token trend.
-- **Per-widget light or dark appearance** — Control-click a widget, choose
-  **编辑小组件**, then toggle **浅色外观**.
+- **Per-widget glass controls** — Control-click a widget, choose **编辑小组件**,
+  then set **浅色外观** and use the native **玻璃不透明度** slider (35–100%).
 - **Clear quota states** — green at 60% or above, orange from 30% to 59%, and
   red below 30%.
 
@@ -21,30 +21,31 @@ weekly quota and Token-usage data while Codex remains in charge of login.
 
 ## Install in two minutes
 
-1. Download [Codex-Quota-v0.3.2-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.3.2/Codex-Quota-v0.3.2-macOS.dmg).
+1. Download [Codex-Quota-v0.4.0-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.4.0/Codex-Quota-v0.4.0-macOS.dmg).
 2. Open the DMG and drag **Codex Quota.app** to **Applications**.
 3. Eject the DMG, then open **Codex Quota** from **Applications** or Launchpad.
    Do not run the app directly from the DMG: macOS may isolate that copy and
    hide its widget extension from the gallery.
-4. On first launch, Control-click the app and choose **Open**. The public build
-   is ad-hoc signed because this open-source project has no Apple Developer ID
-   certificate.
+4. For a release marked **Developer ID signed and Apple-notarized**,
+   double-click **Codex Quota** normally. Ad-hoc-signed releases require
+   Control-click → **Open** once.
 5. Keep Codex Quota running in the menu bar. Control-click the desktop, choose
    **Edit Widgets**, search for **Codex Quota**, then add either **小型** or
    **大型**.
 
-No Terminal is needed for normal use. If macOS still blocks the app after the
-Control-click **Open** step, remove quarantine from the installed copy only:
+No Terminal is needed for normal use. To independently verify a downloaded
+release before opening it, download its matching `checksums.txt` asset and run:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/Codex\ Quota.app 
+./scripts/verify-release.sh ~/Downloads/Codex-Quota-<version>-macOS.dmg \
+  ~/Downloads/Codex-Quota-<version>-checksums.txt
 ```
 
 ### Updating from an older version
 
-Install the new app in **Applications**, quit the previous copy, then remove
-and re-add any existing Codex Quota desktop widgets once. v0.3.2 publishes the
-small and large layouts as separate gallery entries so both remain visible.
+Install the new app in **Applications** and quit the previous copy first. If the
+new opacity slider does not appear immediately, remove and re-add that widget
+once to refresh macOS's cached configuration metadata.
 
 ## Live-data behavior
 
