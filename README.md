@@ -3,8 +3,8 @@
 A native macOS menu bar app and desktop widget for checking your Codex weekly
 quota and seven-day Token usage at a glance.
 
-**Latest release: [v0.4.1](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.4.1)** ·
-[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.4.1/Codex-Quota-v0.4.1-macOS.dmg)
+**Latest release: [v0.4.2](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.4.2)** ·
+[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.4.2/Codex-Quota-v0.4.2-macOS.dmg)
 
 ## What it shows
 
@@ -21,7 +21,7 @@ weekly quota and Token-usage data while Codex remains in charge of login.
 
 ## Install in two minutes
 
-1. Download [Codex-Quota-v0.4.1-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.4.1/Codex-Quota-v0.4.1-macOS.dmg).
+1. Download [Codex-Quota-v0.4.2-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.4.2/Codex-Quota-v0.4.2-macOS.dmg).
 2. Open the DMG and drag **Codex Quota.app** to **Applications**.
 3. Eject the DMG, then open **Codex Quota** from **Applications** or Launchpad.
    Do not run the app directly from the DMG: macOS may isolate that copy and
