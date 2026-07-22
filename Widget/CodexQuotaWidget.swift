@@ -1,23 +1,6 @@
-import AppIntents
 import Foundation
 import SwiftUI
 import WidgetKit
-
-struct AppearanceV3ConfigurationIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "显示设置"
-    static var description = IntentDescription("选择此小组件的深浅色外观与玻璃不透明度。")
-
-    @Parameter(title: "浅色外观", default: false)
-    var useLightAppearance: Bool
-
-    @Parameter(
-        title: "玻璃不透明度",
-        default: 0.86,
-        controlStyle: .slider,
-        inclusiveRange: (lowerBound: 0.35, upperBound: 1.0)
-    )
-    var glassOpacity: Double
-}
 
 struct CodexQuotaEntry: TimelineEntry {
     let date: Date
@@ -75,7 +58,13 @@ struct SmallCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.smallWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
             QuotaRingWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
-                .containerBackground(for: .widget) { Color.clear }
+                .containerBackground(for: .widget) {
+                    LiquidGlassSurface(
+                        isLight: entry.snapshot.resolvedAppearance == .light,
+                        opacity: entry.glassOpacity,
+                        accent: .green
+                    )
+                }
         }
         .configurationDisplayName("Codex Quota · 小型")
         .description("以圆环显示 Codex 周额度剩余比例。")
@@ -88,7 +77,13 @@ struct LargeCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.largeWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
             QuotaWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
-                .containerBackground(for: .widget) { Color.clear }
+                .containerBackground(for: .widget) {
+                    LiquidGlassSurface(
+                        isLight: entry.snapshot.resolvedAppearance == .light,
+                        opacity: entry.glassOpacity,
+                        accent: .blue
+                    )
+                }
         }
         .configurationDisplayName("Codex Quota · 大型")
         .description("查看 Codex 周额度与近七天 Token 用量。")

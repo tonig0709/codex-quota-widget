@@ -12,7 +12,7 @@ let package = Package(
         .target(
             name: "CodexQuotaCore",
             path: "Shared",
-            exclude: ["QuotaWidgetView.swift"]
+            exclude: ["AppearanceV3ConfigurationIntent.swift", "QuotaWidgetView.swift"]
         ),
         .executableTarget(
             name: "QuotaSelfCheck",
