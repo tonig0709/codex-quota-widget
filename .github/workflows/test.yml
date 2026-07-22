@@ -41,6 +41,10 @@ jobs:
           grep 'lsregister' App/WidgetRepairService.swift
           grep 'pluginkit' App/WidgetRepairService.swift
           grep 'reloadAllTimelines' App/WidgetRepairService.swift
+          grep 'requiresInstalledCopy' App/WidgetRepairService.swift
+          grep 'AppTranslocation' App/WidgetRepairService.swift
+          grep 'isCurrentWidgetRegistered' App/WidgetRepairService.swift
+          grep 'InstallLocationView' App/CodexQuotaApp.swift
       - name: Check dark glass surface contract
         run: |
           grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
