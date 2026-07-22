@@ -30,8 +30,17 @@ jobs:
           plutil -convert json -o - "$metadata" | grep 'useLightAppearance'
           plutil -convert json -o - "$metadata" | grep 'glassOpacity'
           plutil -convert json -o - "$metadata" | grep '玻璃不透明度'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")" = \
+            "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$widget/Contents/Info.plist")"
           strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.small.v3'
           strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.large.v3'
+      - name: Check update self-repair contract
+        run: |
+          grep 'WidgetRepairService.repair()' App/CodexQuotaApp.swift
+          grep 'CodexQuotaWidgetExtension' App/WidgetRepairService.swift
+          grep 'lsregister' App/WidgetRepairService.swift
+          grep 'pluginkit' App/WidgetRepairService.swift
+          grep 'reloadAllTimelines' App/WidgetRepairService.swift
       - name: Check dark glass surface contract
         run: |
           grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift

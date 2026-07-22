@@ -31,6 +31,8 @@ struct DashboardView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 132)
 
+                Button("修复小组件") { WidgetRepairService.repair() }
+                    .help("重新登记并刷新桌面小组件")
                 Button("刷新") { server.refresh() }
                     .disabled(server.state == .connecting)
                 if case .disconnected = server.state {
