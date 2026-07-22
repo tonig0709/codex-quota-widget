@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -10,16 +11,25 @@ struct CodexQuotaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            DashboardView(server: server)
+            if WidgetRepairService.requiresInstalledCopy {
+                InstallLocationView()
+            } else {
+                DashboardView(server: server)
+            }
         }
         .windowResizability(.contentSize)
 
         MenuBarExtra("Codex Quota", image: "CodexMark") {
-            Text(menuSummary)
-            Divider()
-            Button("立即刷新") { server.refresh() }
-            Button("修复桌面小组件") { WidgetRepairService.repair() }
-            Button("打开面板") { NSApp.activate(ignoringOtherApps: true) }
+            if WidgetRepairService.requiresInstalledCopy {
+                Text("请从“应用程序”启动")
+                Button("打开“应用程序”文件夹") { WidgetRepairService.revealApplicationsFolder() }
+            } else {
+                Text(menuSummary)
+                Divider()
+                Button("立即刷新") { server.refresh() }
+                Button("修复桌面小组件") { WidgetRepairService.repair() }
+                Button("打开面板") { NSApp.activate(ignoringOtherApps: true) }
+            }
             Divider()
             Button("退出") { NSApp.terminate(nil) }
         }

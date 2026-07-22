@@ -49,6 +49,10 @@ re-registers the installed bundle, and reloads every widget timeline. If macOS
 still shows cached content, choose **修复桌面小组件** from the menu bar app; no
 Terminal command or widget removal is required.
 
+If the app asks you to start it from **Applications**, it is running from a
+temporary download or DMG copy. Drag it to **Applications** and launch that
+copy; macOS does not reliably list widgets from translocated apps.
+
 ## Live-data behavior
 
 Codex Quota starts the locally installed `codex app-server`, polls the account
