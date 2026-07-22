@@ -7,6 +7,14 @@ struct DashboardView: View {
         VStack(spacing: 20) {
             QuotaWidgetView(snapshot: server.snapshot)
                 .frame(width: 680, height: 300)
+                .background {
+                    LiquidGlassSurface(
+                        isLight: server.snapshot.resolvedAppearance == .light,
+                        opacity: WidgetGlassOpacity.defaultValue,
+                        accent: .blue
+                    )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
 
             HStack(spacing: 12) {
                 Label(statusText, systemImage: statusIcon)

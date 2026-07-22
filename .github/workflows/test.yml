@@ -21,14 +21,23 @@ jobs:
             clean build
       - name: Check widget configuration metadata
         run: |
+          app="$PWD/build/Build/Products/Release/Codex Quota.app"
           widget="$PWD/build/Build/Products/Release/Codex Quota.app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          app_metadata="$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
           metadata="$widget/Contents/Resources/Metadata.appintents/extract.actionsdata"
+          plutil -convert json -o - "$app_metadata" | grep 'AppearanceV3ConfigurationIntent'
           plutil -convert json -o - "$metadata" | grep 'AppearanceV3ConfigurationIntent'
           plutil -convert json -o - "$metadata" | grep 'useLightAppearance'
           plutil -convert json -o - "$metadata" | grep 'glassOpacity'
           plutil -convert json -o - "$metadata" | grep '玻璃不透明度'
           strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.small.v3'
           strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.large.v3'
+      - name: Check dark glass surface contract
+        run: |
+          grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
+          ! grep 'Color(red: 0.04' Shared/QuotaWidgetView.swift
+          grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
+          ! grep 'Color.clear' Widget/CodexQuotaWidget.swift
       - name: Check local snapshot bridge
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"

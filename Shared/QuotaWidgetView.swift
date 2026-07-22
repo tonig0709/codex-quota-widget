@@ -109,10 +109,7 @@ public struct QuotaWidgetView: View {
         }
         .padding(22)
         .foregroundStyle(primaryText)
-        .background {
-            LiquidGlassSurface(isLight: isLight, opacity: glassOpacity, accent: chartColor)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
     }
 
@@ -171,17 +168,13 @@ public struct QuotaRingWidgetView: View {
         .padding(14)
         .foregroundStyle(primaryText)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            LiquidGlassSurface(isLight: isLight, opacity: glassOpacity, accent: quotaColor)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Codex 周额度剩余 \(remaining)%")
     }
 
 }
 
-private struct LiquidGlassSurface: View {
+public struct LiquidGlassSurface: View {
     let isLight: Bool
     let opacity: Double
     let accent: Color
@@ -190,48 +183,45 @@ private struct LiquidGlassSurface: View {
 
     private var resolvedOpacity: Double { reduceTransparency ? 1 : WidgetGlassOpacity.clamped(opacity) }
 
-    var body: some View {
+    public init(isLight: Bool, opacity: Double, accent: Color) {
+        self.isLight = isLight
+        self.opacity = opacity
+        self.accent = accent
+    }
+
+    public var body: some View {
         RoundedRectangle(cornerRadius: 30, style: .continuous)
-            .fill(surfaceGradient)
+            .fill(surfaceFill)
             .overlay {
                 RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(borderGradient, lineWidth: 1)
+                    .strokeBorder(outerBorder, lineWidth: 0.8)
                     .overlay {
                         RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .strokeBorder(.white.opacity(isLight ? 0.42 : 0.16), lineWidth: 0.55)
-                            .blur(radius: 0.45)
+                            .inset(by: 1)
+                            .strokeBorder(innerBorder, lineWidth: 0.5)
                     }
-            }
-            .overlay {
-                RadialGradient(
-                    colors: [.white.opacity(isLight ? 0.36 : 0.14), .clear],
-                    center: .topLeading,
-                    startRadius: 5,
-                    endRadius: 155
-                )
-                .blendMode(.screen)
             }
             .overlay(alignment: .top) {
                 Capsule()
-                    .fill(.white.opacity(isLight ? 0.72 : 0.28))
-                    .frame(height: 1)
-                    .padding(.horizontal, 34)
-                    .padding(.top, 0.5)
+                    .fill(.white.opacity(isLight ? 0.66 : 0.18))
+                    .frame(height: 0.75)
+                    .padding(.horizontal, 36)
+                    .padding(.top, 1)
             }
     }
 
-    private var surfaceGradient: LinearGradient {
-        let colors: [Color] = isLight
-            ? [.white.opacity(0.94 * resolvedOpacity), Color(red: 0.88, green: 0.94, blue: 1).opacity(0.84 * resolvedOpacity), .white.opacity(0.88 * resolvedOpacity)]
-            : [Color(red: 0.04, green: 0.06, blue: 0.1).opacity(0.94 * resolvedOpacity), Color(red: 0.08, green: 0.16, blue: 0.27).opacity(0.9 * resolvedOpacity), Color(red: 0.025, green: 0.035, blue: 0.06).opacity(0.96 * resolvedOpacity)]
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    private var surfaceFill: Color {
+        if isLight {
+            return Color(red: 0.93, green: 0.96, blue: 1).opacity(resolvedOpacity)
+        }
+        return .black.opacity(resolvedOpacity)
     }
 
-    private var borderGradient: LinearGradient {
-        LinearGradient(
-            colors: [.white.opacity(isLight ? 0.96 : 0.38), accent.opacity(isLight ? 0.22 : 0.34), .white.opacity(isLight ? 0.58 : 0.14)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+    private var outerBorder: Color {
+        isLight ? .white.opacity(0.9) : .white.opacity(0.22)
+    }
+
+    private var innerBorder: Color {
+        isLight ? accent.opacity(0.16) : .white.opacity(0.08)
     }
 }
