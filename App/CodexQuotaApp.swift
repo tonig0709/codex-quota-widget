@@ -4,6 +4,10 @@ import SwiftUI
 struct CodexQuotaApp: App {
     @StateObject private var server = CodexAppServer()
 
+    init() {
+        WidgetRepairService.repair()
+    }
+
     var body: some Scene {
         WindowGroup {
             DashboardView(server: server)
@@ -14,6 +18,7 @@ struct CodexQuotaApp: App {
             Text(menuSummary)
             Divider()
             Button("立即刷新") { server.refresh() }
+            Button("修复桌面小组件") { WidgetRepairService.repair() }
             Button("打开面板") { NSApp.activate(ignoringOtherApps: true) }
             Divider()
             Button("退出") { NSApp.terminate(nil) }

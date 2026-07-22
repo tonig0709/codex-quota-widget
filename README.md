@@ -43,9 +43,11 @@ release before opening it, download its matching `checksums.txt` asset and run:
 
 ### Updating from an older version
 
-Install the new app in **Applications** and quit the previous copy first. If the
-new opacity slider does not appear immediately, remove and re-add that widget
-once to refresh macOS's cached configuration metadata.
+Install the new app in **Applications**, quit the previous copy first, and open
+the new copy once. The app automatically stops a stale widget extension,
+re-registers the installed bundle, and reloads every widget timeline. If macOS
+still shows cached content, choose **修复桌面小组件** from the menu bar app; no
+Terminal command or widget removal is required.
 
 ## Live-data behavior
 
