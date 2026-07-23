@@ -70,6 +70,8 @@ jobs:
           grep 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift
           grep 'reloadIgnoringLocalCacheData' Widget/CodexQuotaWidget.swift
           grep 'addingTimeInterval(60)' Widget/CodexQuotaWidget.swift
+      - name: Release preflight checklist
+        run: ./scripts/release-preflight.sh "$PWD/build/Build/Products/Release/Codex Quota.app"
       - name: Package DMG
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"
