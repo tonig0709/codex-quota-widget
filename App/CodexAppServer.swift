@@ -48,14 +48,37 @@ final class CodexAppServer: ObservableObject {
     @Published private(set) var state: State = .disconnected
     @Published private(set) var snapshot = SnapshotStore.load()
 
+    private struct PendingRefresh {
+        let rateLimitRequestID: Int
+        let usageRequestID: Int
+        var weekly: UsageWindow?
+        var dailyUsage: [DailyUsage]?
+    }
+
     private var process: Process?
     private var input: FileHandle?
     private var outputBuffer = Data()
     private var refreshTimer: Timer?
+    private var wakeObserver: NSObjectProtocol?
+    private var pendingRefresh: PendingRefresh?
+    private var nextRequestID = 3
     private let snapshotServer = SnapshotServer()
 
     init() {
         snapshotServer.start()
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
+    }
+
+    deinit {
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+        }
     }
 
     func connect() {
@@ -101,7 +124,7 @@ final class CodexAppServer: ObservableObject {
                     "version": "0.4.3"
                 ]
             ])
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
                 Task { @MainActor in self?.refresh() }
             }
         } catch {
@@ -121,8 +144,23 @@ final class CodexAppServer: ObservableObject {
 
     func refresh() {
         guard process != nil else { connect(); return }
-        send(method: "account/rateLimits/read", id: 3)
-        send(method: "account/usage/read", id: 4)
+        let rateLimitRequestID = nextRequestID
+        let usageRequestID = nextRequestID + 1
+        nextRequestID += 2
+        pendingRefresh = PendingRefresh(
+            rateLimitRequestID: rateLimitRequestID,
+            usageRequestID: usageRequestID
+        )
+        send(method: "account/rateLimits/read", id: rateLimitRequestID)
+        send(method: "account/usage/read", id: usageRequestID)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.commitPendingRefreshIfReady(
+                rateLimitRequestID: rateLimitRequestID,
+                usageRequestID: usageRequestID,
+                allowPartial: true
+            )
+        }
     }
 
     func setAppearance(_ appearance: WidgetAppearance) {
@@ -169,18 +207,17 @@ final class CodexAppServer: ObservableObject {
                 state = .signingIn
                 NSWorkspace.shared.open(url)
             }
-        case 3:
-            if let weekly = try? AppServerParser.weeklyWindow(from: object), weekly != snapshot.weekly {
-                snapshot.weekly = weekly
-                persist()
-            }
-        case 4:
-            if let usage = try? AppServerParser.dailyUsage(from: object), usage != snapshot.dailyUsage {
-                snapshot.dailyUsage = usage
-                persist()
-            }
         default:
-            break
+            guard var pending = pendingRefresh else { return }
+            if id == pending.rateLimitRequestID, let weekly = try? AppServerParser.weeklyWindow(from: object) {
+                pending.weekly = weekly
+            } else if id == pending.usageRequestID, let usage = try? AppServerParser.dailyUsage(from: object) {
+                pending.dailyUsage = usage
+            } else {
+                return
+            }
+            pendingRefresh = pending
+            commitPendingRefreshIfReady()
         }
     }
 
@@ -212,7 +249,32 @@ final class CodexAppServer: ObservableObject {
     private func persist() {
         snapshot.updatedAt = .now
         SnapshotStore.save(snapshot)
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)
+    }
+
+    private func commitPendingRefreshIfReady(
+        rateLimitRequestID: Int? = nil,
+        usageRequestID: Int? = nil,
+        allowPartial: Bool = false
+    ) {
+        guard let pending = pendingRefresh,
+              (rateLimitRequestID == nil || pending.rateLimitRequestID == rateLimitRequestID),
+              (usageRequestID == nil || pending.usageRequestID == usageRequestID),
+              allowPartial || (pending.weekly != nil && pending.dailyUsage != nil)
+        else { return }
+        pendingRefresh = nil
+
+        var changed = false
+        if let weekly = pending.weekly, weekly != snapshot.weekly {
+            snapshot.weekly = weekly
+            changed = true
+        }
+        if let dailyUsage = pending.dailyUsage, dailyUsage != snapshot.dailyUsage {
+            snapshot.dailyUsage = dailyUsage
+            changed = true
+        }
+        if changed { persist() }
     }
 
     private func send(method: String, id: Int? = nil, params: [String: Any]? = nil) {

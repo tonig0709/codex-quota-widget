@@ -62,6 +62,14 @@ jobs:
           grep '"dailyUsage"' /tmp/snapshot.json
           grep '"appearance":"dark"' /tmp/snapshot.json
           ! grep -E '"email"|"plan"' /tmp/snapshot.json
+      - name: Check synchronized widget refresh contract
+        run: |
+          grep 'private struct PendingRefresh' App/CodexAppServer.swift
+          grep 'withTimeInterval: 15' App/CodexAppServer.swift
+          grep 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexAppServer.swift
+          grep 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift
+          grep 'reloadIgnoringLocalCacheData' Widget/CodexQuotaWidget.swift
+          grep 'addingTimeInterval(60)' Widget/CodexQuotaWidget.swift
       - name: Package DMG
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"

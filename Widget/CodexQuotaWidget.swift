@@ -24,7 +24,9 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> Timeline<CodexQuotaEntry> {
         let entry = await entry(for: configuration)
-        return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(5 * 60)))
+        // The app explicitly reloads both widget kinds on a data change. This
+        // one-minute policy is the safe fallback if macOS coalesces that request.
+        return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(60)))
     }
 
     private func previewEntry(for configuration: AppearanceV3ConfigurationIntent) -> CodexQuotaEntry {
@@ -42,6 +44,8 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     private func loadSnapshot() async -> UsageSnapshot {
         var request = URLRequest(url: snapshotURL)
         request.timeoutInterval = 2
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let response = response as? HTTPURLResponse,
               response.statusCode == 200,
