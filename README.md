@@ -56,9 +56,11 @@ copy; macOS does not reliably list widgets from translocated apps.
 ## Live-data behavior
 
 Codex Quota starts the locally installed `codex app-server`, polls the account
-every 30 seconds, and asks WidgetKit to refresh only when the underlying quota
-or usage changes. WidgetKit ultimately controls desktop refresh timing, so the
-trend is near-real-time rather than a guaranteed per-second display.
+every 15 seconds, and commits the weekly quota and seven-day usage result as
+one snapshot before refreshing both widget sizes. Each widget also retries its
+own local refresh within one minute if macOS coalesces the immediate request.
+WidgetKit ultimately controls desktop refresh timing, so the trend is
+near-real-time rather than a guaranteed per-second display.
 
 ## Privacy and security
 
