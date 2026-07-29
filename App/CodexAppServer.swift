@@ -51,7 +51,7 @@ final class CodexAppServer: ObservableObject {
     private struct PendingRefresh {
         let rateLimitRequestID: Int
         let usageRequestID: Int
-        var weekly: UsageWindow?
+        var rateLimits: RateLimitWindows?
         var dailyUsage: [DailyUsage]?
     }
 
@@ -121,7 +121,7 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.4.4"
+                    "version": "0.5.0"
                 ]
             ])
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
@@ -209,8 +209,8 @@ final class CodexAppServer: ObservableObject {
             }
         default:
             guard var pending = pendingRefresh else { return }
-            if id == pending.rateLimitRequestID, let weekly = try? AppServerParser.weeklyWindow(from: object) {
-                pending.weekly = weekly
+            if id == pending.rateLimitRequestID, let rateLimits = try? AppServerParser.rateLimitWindows(from: object) {
+                pending.rateLimits = rateLimits
             } else if id == pending.usageRequestID, let usage = try? AppServerParser.dailyUsage(from: object) {
                 pending.dailyUsage = usage
             } else {
@@ -261,14 +261,20 @@ final class CodexAppServer: ObservableObject {
         guard let pending = pendingRefresh,
               (rateLimitRequestID == nil || pending.rateLimitRequestID == rateLimitRequestID),
               (usageRequestID == nil || pending.usageRequestID == usageRequestID),
-              allowPartial || (pending.weekly != nil && pending.dailyUsage != nil)
+              allowPartial || (pending.rateLimits != nil && pending.dailyUsage != nil)
         else { return }
         pendingRefresh = nil
 
         var changed = false
-        if let weekly = pending.weekly, weekly != snapshot.weekly {
-            snapshot.weekly = weekly
-            changed = true
+        if let rateLimits = pending.rateLimits {
+            if rateLimits.fiveHour != snapshot.fiveHour {
+                snapshot.fiveHour = rateLimits.fiveHour
+                changed = true
+            }
+            if rateLimits.weekly != snapshot.weekly {
+                snapshot.weekly = rateLimits.weekly
+                changed = true
+            }
         }
         if let dailyUsage = pending.dailyUsage, dailyUsage != snapshot.dailyUsage {
             snapshot.dailyUsage = dailyUsage

@@ -8,7 +8,7 @@ created. The automated gate rejects a release if any of these checks fail:
 - the installed-app registration repair and App Translocation guard are present;
 - each widget has a real container background and the known black-screen
   fallback contract is intact;
-- quota and seven-day usage are committed as one snapshot, both widget sizes
+- 5h quota, weekly quota, and seven-day usage are committed as one snapshot; both widget sizes
   receive a targeted refresh, cached HTTP data is bypassed, and a one-minute
   timeline fallback remains enabled;
 - the localhost snapshot endpoint returns usage data without email or plan data.
@@ -19,6 +19,8 @@ Before announcing a release, complete this short visual smoke test on a Mac:
 - [ ] Open **Edit Widgets**, search **Codex Quota**, and confirm both **小型** and
       **大型** can be added.
 - [ ] Confirm neither size is black or blank in both light and dark appearance.
+- [ ] Confirm the small widget shows separate 5h and weekly rings, and the large
+      widget shows 5h above weekly quota.
 - [ ] Use **立即刷新**, then confirm quota and seven-day trend update within one
       minute after new Codex usage is available.
 

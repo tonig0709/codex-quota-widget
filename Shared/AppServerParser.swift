@@ -11,6 +11,11 @@ public struct AccountInfo: Equatable, Sendable {
     public let isLoggedIn: Bool
 }
 
+public struct RateLimitWindows: Equatable, Sendable {
+    public let fiveHour: UsageWindow?
+    public let weekly: UsageWindow
+}
+
 public enum AppServerParser {
     public static func object(from data: Data) throws -> [String: Any] {
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -33,7 +38,7 @@ public enum AppServerParser {
         )
     }
 
-    public static func weeklyWindow(from object: [String: Any]) throws -> UsageWindow {
+    public static func rateLimitWindows(from object: [String: Any]) throws -> RateLimitWindows {
         guard let result = object["result"] as? [String: Any],
               let limits = result["rateLimits"] as? [String: Any]
         else { throw AppServerParserError.missingRateLimits }
@@ -43,15 +48,17 @@ public enum AppServerParser {
 
         guard let weekly = windows.max(by: {
             int($0["windowDurationMins"]) < int($1["windowDurationMins"])
-        }), let used = intOrNil(weekly["usedPercent"])
+        }).flatMap(usageWindow)
         else { throw AppServerParserError.missingRateLimits }
 
-        let reset = intOrNil(weekly["resetsAt"]).map { Date(timeIntervalSince1970: TimeInterval($0)) }
-        return UsageWindow(
-            usedPercent: used,
-            windowDurationMinutes: intOrNil(weekly["windowDurationMins"]),
-            resetsAt: reset
+        return RateLimitWindows(
+            fiveHour: windows.first(where: { int($0["windowDurationMins"]) == 300 }).flatMap(usageWindow),
+            weekly: weekly
         )
+    }
+
+    public static func weeklyWindow(from object: [String: Any]) throws -> UsageWindow {
+        try rateLimitWindows(from: object).weekly
     }
 
     public static func dailyUsage(from object: [String: Any]) throws -> [DailyUsage] {
@@ -77,6 +84,16 @@ public enum AppServerParser {
     }
 
     private static func int(_ value: Any?) -> Int { intOrNil(value) ?? 0 }
+
+    private static func usageWindow(_ value: [String: Any]) -> UsageWindow? {
+        guard let used = intOrNil(value["usedPercent"]) else { return nil }
+        let reset = intOrNil(value["resetsAt"]).map { Date(timeIntervalSince1970: TimeInterval($0)) }
+        return UsageWindow(
+            usedPercent: used,
+            windowDurationMinutes: intOrNil(value["windowDurationMins"]),
+            resetsAt: reset
+        )
+    }
 
     private static func intOrNil(_ value: Any?) -> Int? {
         if let value = value as? Int { return value }
