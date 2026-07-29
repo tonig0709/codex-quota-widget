@@ -71,7 +71,7 @@ struct SmallCodexQuotaWidget: Widget {
                 }
         }
         .configurationDisplayName("Codex Quota · 小型")
-        .description("以圆环显示 Codex 周额度剩余比例。")
+        .description("以双圆环显示 Codex 5h 与周额度剩余比例。")
         .supportedFamilies([.systemSmall])
         .contentMarginsDisabled()
     }
@@ -90,7 +90,7 @@ struct LargeCodexQuotaWidget: Widget {
                 }
         }
         .configurationDisplayName("Codex Quota · 大型")
-        .description("查看 Codex 周额度与近七天 Token 用量。")
+        .description("查看 Codex 5h、周额度与近七天 Token 用量。")
         .supportedFamilies([.systemExtraLarge])
         .contentMarginsDisabled()
     }

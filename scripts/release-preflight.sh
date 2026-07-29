@@ -36,6 +36,10 @@ grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
 
 echo 'Checking widget synchronization contract…'
 grep 'private struct PendingRefresh' App/CodexAppServer.swift
+grep 'rateLimitWindows' App/CodexAppServer.swift
+grep 'snapshot.fiveHour' App/CodexAppServer.swift
+grep 'quotaRing(title: "5h"' Shared/QuotaWidgetView.swift
+grep 'quotaSection(title: "5h额度"' Shared/QuotaWidgetView.swift
 grep 'withTimeInterval: 15' App/CodexAppServer.swift
 grep 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexAppServer.swift
 grep 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift
@@ -49,6 +53,7 @@ trap 'kill "$app_pid" 2>/dev/null || true' EXIT
 curl --fail --retry 10 --retry-delay 1 --retry-connrefused \
   http://127.0.0.1:48193/snapshot -o /tmp/snapshot.json
 grep '"dailyUsage"' /tmp/snapshot.json
+grep '"fiveHour"' /tmp/snapshot.json
 grep '"appearance":"dark"' /tmp/snapshot.json
 ! grep -E '"email"|"plan"' /tmp/snapshot.json
 

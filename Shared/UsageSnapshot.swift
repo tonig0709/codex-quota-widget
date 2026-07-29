@@ -35,6 +35,7 @@ public struct DailyUsage: Codable, Equatable, Identifiable, Sendable {
 }
 
 public struct UsageSnapshot: Codable, Equatable, Sendable {
+    public var fiveHour: UsageWindow?
     public var weekly: UsageWindow?
     public var dailyUsage: [DailyUsage]
     public var email: String?
@@ -43,6 +44,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
     public var updatedAt: Date
 
     public init(
+        fiveHour: UsageWindow? = nil,
         weekly: UsageWindow? = nil,
         dailyUsage: [DailyUsage] = [],
         email: String? = nil,
@@ -50,6 +52,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
         appearance: WidgetAppearance = .dark,
         updatedAt: Date = .now
     ) {
+        self.fiveHour = fiveHour
         self.weekly = weekly
         self.dailyUsage = dailyUsage
         self.email = email
@@ -61,6 +64,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
     public var resolvedAppearance: WidgetAppearance { appearance ?? .dark }
 
     public static let placeholder = UsageSnapshot(
+        fiveHour: UsageWindow(usedPercent: 18, windowDurationMinutes: 300, resetsAt: nil),
         weekly: UsageWindow(usedPercent: 28, windowDurationMinutes: 10_080, resetsAt: nil),
         dailyUsage: [
             .init(startDate: "Mon", tokens: 12_000_000),

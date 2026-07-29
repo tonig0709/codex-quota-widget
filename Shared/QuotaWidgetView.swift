@@ -10,20 +10,12 @@ public struct QuotaWidgetView: View {
         self.glassOpacity = WidgetGlassOpacity.clamped(glassOpacity)
     }
 
-    private var remaining: Int { snapshot.weekly?.remainingPercent ?? 0 }
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
     private var primaryText: Color { isLight ? Color(red: 0.08, green: 0.1, blue: 0.14) : .white }
     private var secondaryText: Color { isLight ? .black.opacity(0.52) : .white.opacity(0.56) }
     private var trackColor: Color { isLight ? .black.opacity(0.09) : .white.opacity(0.14) }
     private var gridColor: Color { isLight ? .black.opacity(0.08) : .white.opacity(0.1) }
     private var chartColor: Color { isLight ? .indigo : Color(red: 0.32, green: 0.58, blue: 1) }
-    private var quotaColor: Color {
-        switch QuotaLevel(remainingPercent: remaining) {
-        case .healthy: .green
-        case .warning: .orange
-        case .critical: .red
-        }
-    }
 
     public var body: some View {
         VStack(spacing: 18) {
@@ -51,30 +43,9 @@ public struct QuotaWidgetView: View {
             }
 
             HStack(alignment: .bottom, spacing: 30) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("周额度")
-                            .font(.headline.weight(.semibold))
-                        Spacer()
-                        Text("\(remaining)%")
-                            .font(.system(size: 40, weight: .semibold, design: .rounded))
-                            .tracking(-1.2)
-                            .monospacedDigit()
-                    }
-
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(trackColor)
-                            Capsule()
-                                .fill(quotaColor.gradient)
-                                .frame(width: proxy.size.width * CGFloat(remaining) / 100)
-                        }
-                    }
-                    .frame(height: 10)
-
-                    Label(resetText, systemImage: "clock.arrow.circlepath")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(secondaryText)
+                VStack(alignment: .leading, spacing: 14) {
+                    quotaSection(title: "5h额度", window: snapshot.fiveHour)
+                    quotaSection(title: "周额度", window: snapshot.weekly)
                 }
                 .frame(maxWidth: 244)
 
@@ -113,8 +84,45 @@ public struct QuotaWidgetView: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var resetText: String {
-        guard let date = snapshot.weekly?.resetsAt else { return "等待账户数据" }
+    private func quotaSection(title: String, window: UsageWindow?) -> some View {
+        let remaining = window?.remainingPercent ?? 0
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                Spacer()
+                Text("\(remaining)%")
+                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .tracking(-1.1)
+                    .monospacedDigit()
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(trackColor)
+                    Capsule()
+                        .fill(quotaColor(for: remaining).gradient)
+                        .frame(width: proxy.size.width * CGFloat(remaining) / 100)
+                }
+            }
+            .frame(height: 9)
+
+            Label(resetText(for: window), systemImage: "clock.arrow.circlepath")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(secondaryText)
+        }
+    }
+
+    private func quotaColor(for remaining: Int) -> Color {
+        switch QuotaLevel(remainingPercent: remaining) {
+        case .healthy: .green
+        case .warning: .orange
+        case .critical: .red
+        }
+    }
+
+    private func resetText(for window: UsageWindow?) -> String {
+        guard let date = window?.resetsAt else { return "等待账户数据" }
         return "\(date.formatted(date: .numeric, time: .shortened)) 重置"
     }
 
@@ -132,46 +140,53 @@ public struct QuotaRingWidgetView: View {
         self.glassOpacity = WidgetGlassOpacity.clamped(glassOpacity)
     }
 
-    private var remaining: Int { snapshot.weekly?.remainingPercent ?? 0 }
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
     private var primaryText: Color { isLight ? Color(red: 0.08, green: 0.1, blue: 0.14) : .white }
     private var trackColor: Color { isLight ? .black.opacity(0.09) : .white.opacity(0.14) }
-    private var quotaColor: Color {
+
+    public var body: some View {
+        HStack(spacing: 12) {
+            quotaRing(title: "5h", window: snapshot.fiveHour)
+            quotaRing(title: "周", window: snapshot.weekly)
+        }
+        .padding(12)
+        .foregroundStyle(primaryText)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func quotaRing(title: String, window: UsageWindow?) -> some View {
+        let remaining = window?.remainingPercent ?? 0
+        return VStack(spacing: 7) {
+            ZStack {
+                Circle().stroke(trackColor, lineWidth: 8)
+                Circle()
+                    .trim(from: 0, to: CGFloat(remaining) / 100)
+                    .stroke(quotaColor(for: remaining).gradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Image("CodexMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                    .accessibilityHidden(true)
+            }
+            .frame(width: 58, height: 58)
+
+            Text("\(title) \(remaining)%")
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Codex \(title)额度剩余 \(remaining)%")
+    }
+
+    private func quotaColor(for remaining: Int) -> Color {
         switch QuotaLevel(remainingPercent: remaining) {
         case .healthy: .green
         case .warning: .orange
         case .critical: .red
         }
     }
-
-    public var body: some View {
-        VStack(spacing: 7) {
-            ZStack {
-                Circle().stroke(trackColor, lineWidth: 10)
-                Circle()
-                    .trim(from: 0, to: CGFloat(remaining) / 100)
-                    .stroke(quotaColor.gradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Image("CodexMark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 34, height: 34)
-                    .accessibilityHidden(true)
-            }
-            .frame(width: 82, height: 82)
-
-            Text("\(remaining)%")
-                .font(.system(size: 38, weight: .semibold, design: .rounded))
-                .tracking(-1.8)
-                .monospacedDigit()
-        }
-        .padding(14)
-        .foregroundStyle(primaryText)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Codex 周额度剩余 \(remaining)%")
-    }
-
 }
 
 public struct LiquidGlassSurface: View {
