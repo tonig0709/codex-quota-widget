@@ -15,7 +15,9 @@ test -x "$widget_executable"
 test "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$widget/Contents/Info.plist")" = 'com.apple.widgetkit-extension'
 test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$widget/Contents/Info.plist")" = 'dev.codexquota.app.widget'
 test "$app_build" = "$widget_build"
-/usr/bin/lipo -verify_arch arm64 x86_64 "$widget_executable"
+widget_archs=$(/usr/bin/lipo "$widget_executable" -archs)
+case " $widget_archs " in *" arm64 "*) ;; *) exit 1 ;; esac
+case " $widget_archs " in *" x86_64 "*) ;; *) exit 1 ;; esac
 grep '@MainActor' Widget/CodexQuotaWidget.swift
 grep 'F40000000000000000000004.*name = Release;' CodexQuotaWidget.xcodeproj/project.pbxproj
 installed_app="/Applications/Codex Quota.app"
