@@ -313,7 +313,7 @@ private struct ParticleGlassBorder: View {
     let color: ParticleColorSettings
 
     var body: some View {
-        Canvas(opaque: false, rendersAsynchronously: true) { context, size in
+        Canvas(opaque: false) { context, size in
             drawParticles(
                 in: &context,
                 size: size,
@@ -439,7 +439,7 @@ private struct ParticleTipEmitter: View {
     let color: ParticleColorSettings
 
     var body: some View {
-        Canvas(opaque: false, rendersAsynchronously: true) { context, size in
+        Canvas(opaque: false) { context, size in
             drawParticles(
                 in: &context,
                 size: size,

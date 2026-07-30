@@ -55,6 +55,7 @@ grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
 grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
 grep 'WidgetSurface(' Widget/CodexQuotaWidget.swift
 grep 'ParticleTipEmitter' Shared/QuotaWidgetView.swift
+! grep 'rendersAsynchronously: true' Shared/QuotaWidgetView.swift
 ! grep 'onContinuousHover' Widget/CodexQuotaWidget.swift
 ! grep 'TimelineView' Shared/QuotaWidgetView.swift
 ! grep 'Color.clear' Widget/CodexQuotaWidget.swift
