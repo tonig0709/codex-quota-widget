@@ -240,3 +240,115 @@ public struct LiquidGlassSurface: View {
         isLight ? accent.opacity(0.16) : .white.opacity(0.08)
     }
 }
+
+public struct WidgetSurface: View {
+    let isLight: Bool
+    let opacity: Double
+    let accent: Color
+    let usesParticles: Bool
+    let particleColor: ParticleColorSettings
+
+    public init(
+        isLight: Bool,
+        opacity: Double,
+        accent: Color,
+        usesParticles: Bool = false,
+        particleColor: ParticleColorSettings = .defaultValue
+    ) {
+        self.isLight = isLight
+        self.opacity = opacity
+        self.accent = accent
+        self.usesParticles = usesParticles
+        self.particleColor = particleColor
+    }
+
+    public var body: some View {
+        ZStack {
+            LiquidGlassSurface(isLight: isLight, opacity: opacity, accent: accent)
+            if usesParticles {
+                ParticleGlassBorder(isLight: isLight, color: particleColor)
+            }
+        }
+    }
+}
+
+private struct ParticleGlassBorder: View {
+    let isLight: Bool
+    let color: ParticleColorSettings
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var accent: Color {
+        Color(
+            hue: color.hue,
+            saturation: color.saturation,
+            brightness: color.brightness
+        )
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 24, paused: reduceMotion)) { timeline in
+            Canvas(opaque: false, rendersAsynchronously: true) { context, size in
+                drawParticles(
+                    in: &context,
+                    size: size,
+                    time: reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
+                )
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func drawParticles(in context: inout GraphicsContext, size: CGSize, time: Double) {
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let phase = time * (2 * .pi / 5.6)
+        let particleCount = size.width < 220 ? 84 : 132
+        let lanes = 4
+
+        for lane in 0..<lanes {
+            for index in 0..<particleCount {
+                let progress = Double(index) / Double(particleCount)
+                let angle = progress * 2 * .pi
+                let wave = sin(angle * 3 + phase) * 1.15 + sin(angle * 7 - phase * 0.72) * 0.45
+                let inset = 3.6 + Double(lane) * 1.45 - wave
+                let xUnit = signedPower(cos(angle), exponent: 0.36)
+                let yUnit = signedPower(sin(angle), exponent: 0.36)
+                var x = Double(center.x) + (Double(size.width) / 2 - inset) * xUnit
+                let y = Double(center.y) + (Double(size.height) / 2 - inset) * yUnit
+
+                let shedding = x > Double(size.width) * 0.82 && index.isMultiple(of: 13)
+                if shedding {
+                    x += (sin(phase + Double(index)) + 1) * 3.2
+                }
+
+                let movingHighlight = max(0, cos(angle - phase))
+                let highlight = pow(movingHighlight, 8)
+                let diameter = 0.8 + Double((index + lane) % 4) * 0.18 + highlight * 0.9
+                let opacity = min(1, (isLight ? 0.32 : 0.46)
+                    + Double(lanes - lane) * 0.055
+                    + highlight * 0.34)
+
+                let rect = CGRect(
+                    x: x - diameter / 2,
+                    y: y - diameter / 2,
+                    width: diameter,
+                    height: diameter
+                )
+                context.fill(Path(ellipseIn: rect), with: .color(accent.opacity(opacity)))
+            }
+        }
+
+        let edge = RoundedRectangle(cornerRadius: 30, style: .continuous)
+            .path(in: CGRect(origin: .zero, size: size).insetBy(dx: 2.2, dy: 2.2))
+        context.stroke(
+            edge,
+            with: .color(accent.opacity(isLight ? 0.14 : 0.2)),
+            lineWidth: 1
+        )
+    }
+
+    private func signedPower(_ value: Double, exponent: Double) -> Double {
+        copysign(pow(abs(value), exponent), value)
+    }
+}

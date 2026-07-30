@@ -16,6 +16,10 @@ plutil -convert json -o - "$app_metadata" | grep 'AppearanceV3ConfigurationInten
 plutil -convert json -o - "$widget_metadata" | grep 'AppearanceV3ConfigurationIntent'
 plutil -convert json -o - "$widget_metadata" | grep 'useLightAppearance'
 plutil -convert json -o - "$widget_metadata" | grep 'glassOpacity'
+plutil -convert json -o - "$widget_metadata" | grep 'visualTheme'
+plutil -convert json -o - "$widget_metadata" | grep 'particleHue'
+plutil -convert json -o - "$widget_metadata" | grep 'particleSaturation'
+plutil -convert json -o - "$widget_metadata" | grep 'particleBrightness'
 strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.small.v3'
 strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.large.v3'
 grep 'WidgetRepairService.repair()' App/CodexQuotaApp.swift
@@ -32,6 +36,7 @@ echo 'Checking no-black-screen rendering contract…'
 grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
 ! grep 'Color(red: 0.04' Shared/QuotaWidgetView.swift
 grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
+grep 'WidgetSurface(' Widget/CodexQuotaWidget.swift
 ! grep 'Color.clear' Widget/CodexQuotaWidget.swift
 
 echo 'Checking widget synchronization contract…'

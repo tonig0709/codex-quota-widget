@@ -6,13 +6,21 @@ struct CodexQuotaEntry: TimelineEntry {
     let date: Date
     let snapshot: UsageSnapshot
     let glassOpacity: Double
+    let visualTheme: WidgetVisualTheme
+    let particleColor: ParticleColorSettings
 }
 
 struct CodexQuotaProvider: AppIntentTimelineProvider {
     private let snapshotURL = URL(string: "http://127.0.0.1:48193/snapshot")!
 
     func placeholder(in context: Context) -> CodexQuotaEntry {
-        CodexQuotaEntry(date: .now, snapshot: .placeholder, glassOpacity: WidgetGlassOpacity.defaultValue)
+        CodexQuotaEntry(
+            date: .now,
+            snapshot: .placeholder,
+            glassOpacity: WidgetGlassOpacity.defaultValue,
+            visualTheme: .classic,
+            particleColor: .defaultValue
+        )
     }
 
     func snapshot(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
@@ -32,13 +40,30 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     private func previewEntry(for configuration: AppearanceV3ConfigurationIntent) -> CodexQuotaEntry {
         var snapshot = UsageSnapshot.placeholder
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
+        return configuredEntry(snapshot: snapshot, configuration: configuration)
     }
 
     private func entry(for configuration: AppearanceV3ConfigurationIntent) async -> CodexQuotaEntry {
         var snapshot = await loadSnapshot()
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
+        return configuredEntry(snapshot: snapshot, configuration: configuration)
+    }
+
+    private func configuredEntry(
+        snapshot: UsageSnapshot,
+        configuration: AppearanceV3ConfigurationIntent
+    ) -> CodexQuotaEntry {
+        CodexQuotaEntry(
+            date: .now,
+            snapshot: snapshot,
+            glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity),
+            visualTheme: configuration.visualTheme,
+            particleColor: ParticleColorSettings(
+                hue: configuration.particleHue,
+                saturation: configuration.particleSaturation,
+                brightness: configuration.particleBrightness
+            )
+        )
     }
 
     private func loadSnapshot() async -> UsageSnapshot {
@@ -63,10 +88,12 @@ struct SmallCodexQuotaWidget: Widget {
         AppIntentConfiguration(kind: SnapshotStore.smallWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
             QuotaRingWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
                 .containerBackground(for: .widget) {
-                    LiquidGlassSurface(
+                    WidgetSurface(
                         isLight: entry.snapshot.resolvedAppearance == .light,
                         opacity: entry.glassOpacity,
-                        accent: .green
+                        accent: .green,
+                        usesParticles: entry.visualTheme == .particle,
+                        particleColor: entry.particleColor
                     )
                 }
         }
@@ -82,10 +109,12 @@ struct LargeCodexQuotaWidget: Widget {
         AppIntentConfiguration(kind: SnapshotStore.largeWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
             QuotaWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
                 .containerBackground(for: .widget) {
-                    LiquidGlassSurface(
+                    WidgetSurface(
                         isLight: entry.snapshot.resolvedAppearance == .light,
                         opacity: entry.glassOpacity,
-                        accent: .blue
+                        accent: .blue,
+                        usesParticles: entry.visualTheme == .particle,
+                        particleColor: entry.particleColor
                     )
                 }
         }

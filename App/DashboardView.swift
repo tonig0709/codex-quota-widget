@@ -8,7 +8,7 @@ struct DashboardView: View {
             QuotaWidgetView(snapshot: server.snapshot)
                 .frame(width: 680, height: 300)
                 .background {
-                    LiquidGlassSurface(
+                    WidgetSurface(
                         isLight: server.snapshot.resolvedAppearance == .light,
                         opacity: WidgetGlassOpacity.defaultValue,
                         accent: .blue
