@@ -7,13 +7,17 @@ app_metadata="$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
 widget_metadata="$widget/Contents/Resources/Metadata.appintents/extract.actionsdata"
 app_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")
 widget_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$widget/Contents/Info.plist")
+widget_executable="$widget/Contents/MacOS/CodexQuotaWidgetExtension"
 
 echo 'Checking widget gallery registration…'
 test -d "$widget"
-test -x "$widget/Contents/MacOS/CodexQuotaWidgetExtension"
+test -x "$widget_executable"
 test "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$widget/Contents/Info.plist")" = 'com.apple.widgetkit-extension'
 test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$widget/Contents/Info.plist")" = 'dev.codexquota.app.widget'
 test "$app_build" = "$widget_build"
+/usr/bin/lipo -verify_arch arm64 x86_64 "$widget_executable"
+grep '@MainActor' Widget/CodexQuotaWidget.swift
+grep 'F40000000000000000000004.*name = Release;' CodexQuotaWidget.xcodeproj/project.pbxproj
 installed_app="/Applications/Codex Quota.app"
 if [ -d "$installed_app" ] && [ "$app" != "$installed_app" ]; then
   installed_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$installed_app/Contents/Info.plist")

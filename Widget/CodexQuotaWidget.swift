@@ -142,6 +142,7 @@ struct LargeCodexQuotaWidget: Widget {
 }
 
 @main
+@MainActor
 struct CodexQuotaWidgetBundle: WidgetBundle {
     var body: some Widget {
         SmallCodexQuotaWidget()
