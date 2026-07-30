@@ -1,17 +1,20 @@
 # Codex Quota for macOS
 
-A native macOS menu bar app and desktop widget for checking your Codex weekly
-quota and seven-day Token usage at a glance.
+A native macOS menu bar app and desktop widget for checking your Codex 5h and
+weekly quota plus seven-day Token usage at a glance.
 
-**Latest release: [v0.5.0](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.5.0)** ·
-[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.5.0/Codex-Quota-v0.5.0-macOS.dmg)
+**Latest release: [v0.6.0](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.6.0)** ·
+[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.6.0/Codex-Quota-v0.6.0-macOS.dmg)
 
 ## What it shows
 
 - **Codex Quota · 小型** — compact 5h and weekly quota rings with the Codex mark.
 - **Codex Quota · 大型** — 5h and weekly remaining quota plus a seven-day Token trend.
-- **Per-widget glass controls** — Control-click a widget, choose **编辑小组件**,
-  then set **浅色外观** and use the native **玻璃不透明度** slider (35–100%).
+- **Two visual themes** — choose classic Liquid Glass or the new particle
+  border independently for every widget.
+- **Per-widget appearance controls** — Control-click a widget, choose
+  **编辑小组件**, then set light/dark appearance, glass opacity (35–100%), and
+  the particle hue, saturation, and brightness.
 - **Clear quota states** — green at 60% or above, orange from 30% to 59%, and
   red below 30%.
 
@@ -20,7 +23,7 @@ data while Codex remains in charge of login.
 
 ## Install in two minutes
 
-1. Download [Codex-Quota-v0.5.0-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.5.0/Codex-Quota-v0.5.0-macOS.dmg).
+1. Download [Codex-Quota-v0.6.0-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.6.0/Codex-Quota-v0.6.0-macOS.dmg).
 2. Open the DMG and drag **Codex Quota.app** to **Applications**.
 3. Eject the DMG, then open **Codex Quota** from **Applications** or Launchpad.
    Do not run the app directly from the DMG: macOS may isolate that copy and
