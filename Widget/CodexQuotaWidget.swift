@@ -87,8 +87,6 @@ private struct ConfiguredQuotaWidgetView: View {
     let entry: CodexQuotaEntry
     let isSmall: Bool
 
-    private let hoverState = ParticleHoverState()
-
     var body: some View {
         Group {
             if isSmall {
@@ -113,17 +111,8 @@ private struct ConfiguredQuotaWidgetView: View {
                 opacity: entry.glassOpacity,
                 accent: isSmall ? .green : .blue,
                 usesParticles: entry.visualTheme == .particle,
-                particleColor: entry.particleColor,
-                hoverState: hoverState
+                particleColor: entry.particleColor
             )
-        }
-        .onContinuousHover { phase in
-            switch phase {
-            case .active(let location):
-                hoverState.location = location
-            case .ended:
-                hoverState.location = nil
-            }
         }
     }
 }

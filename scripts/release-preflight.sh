@@ -19,6 +19,9 @@ if [ -d "$installed_app" ] && [ "$app" != "$installed_app" ]; then
   installed_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$installed_app/Contents/Info.plist")
   test "$app_build" -gt "$installed_build"
 fi
+if [ "$app" = "$installed_app" ]; then
+  /usr/bin/pluginkit -m -A -v -i dev.codexquota.app.widget | grep '^+.*dev.codexquota.app.widget'
+fi
 plutil -convert json -o - "$app_metadata" | grep 'AppearanceV3ConfigurationIntent'
 plutil -convert json -o - "$widget_metadata" | grep 'AppearanceV3ConfigurationIntent'
 plutil -convert json -o - "$widget_metadata" | grep 'useLightAppearance'
@@ -33,6 +36,7 @@ grep 'WidgetRepairService.repair()' App/CodexQuotaApp.swift
 grep 'CodexQuotaWidgetExtension' App/WidgetRepairService.swift
 grep 'lsregister' App/WidgetRepairService.swift
 grep 'pluginkit' App/WidgetRepairService.swift
+grep 'arguments: \["-e", "use", "-i", extensionIdentifier\]' App/WidgetRepairService.swift
 grep 'reloadAllTimelines' App/WidgetRepairService.swift
 grep 'requiresInstalledCopy' App/WidgetRepairService.swift
 grep 'AppTranslocation' App/WidgetRepairService.swift
@@ -44,8 +48,9 @@ grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
 ! grep 'Color(red: 0.04' Shared/QuotaWidgetView.swift
 grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
 grep 'WidgetSurface(' Widget/CodexQuotaWidget.swift
-grep 'onContinuousHover' Widget/CodexQuotaWidget.swift
 grep 'ParticleTipEmitter' Shared/QuotaWidgetView.swift
+! grep 'onContinuousHover' Widget/CodexQuotaWidget.swift
+! grep 'TimelineView' Shared/QuotaWidgetView.swift
 ! grep 'Color.clear' Widget/CodexQuotaWidget.swift
 
 echo 'Checking widget synchronization contract…'

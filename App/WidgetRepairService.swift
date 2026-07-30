@@ -36,6 +36,7 @@ enum WidgetRepairService {
                 run(launchServicesTool, arguments: ["-f", appURL.path])
                 if FileManager.default.fileExists(atPath: widgetURL.path) {
                     run("/usr/bin/pluginkit", arguments: ["-a", widgetURL.path])
+                    run("/usr/bin/pluginkit", arguments: ["-e", "use", "-i", extensionIdentifier])
                 }
                 UserDefaults.standard.set(build, forKey: lastVerifiedBuildKey)
             }

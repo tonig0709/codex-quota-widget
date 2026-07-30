@@ -274,32 +274,25 @@ public struct LiquidGlassSurface: View {
     }
 }
 
-final class ParticleHoverState {
-    var location: CGPoint?
-}
-
 struct WidgetSurface: View {
     let isLight: Bool
     let opacity: Double
     let accent: Color
     let usesParticles: Bool
     let particleColor: ParticleColorSettings
-    let hoverState: ParticleHoverState?
 
     init(
         isLight: Bool,
         opacity: Double,
         accent: Color,
         usesParticles: Bool = false,
-        particleColor: ParticleColorSettings = .defaultValue,
-        hoverState: ParticleHoverState? = nil
+        particleColor: ParticleColorSettings = .defaultValue
     ) {
         self.isLight = isLight
         self.opacity = opacity
         self.accent = accent
         self.usesParticles = usesParticles
         self.particleColor = particleColor
-        self.hoverState = hoverState
     }
 
     public var body: some View {
@@ -308,8 +301,7 @@ struct WidgetSurface: View {
             if usesParticles {
                 ParticleGlassBorder(
                     isLight: isLight,
-                    color: particleColor,
-                    hoverState: hoverState
+                    color: particleColor
                 )
             }
         }
@@ -319,19 +311,14 @@ struct WidgetSurface: View {
 private struct ParticleGlassBorder: View {
     let isLight: Bool
     let color: ParticleColorSettings
-    let hoverState: ParticleHoverState?
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 24)) { timeline in
-            Canvas(opaque: false, rendersAsynchronously: true) { context, size in
-                drawParticles(
-                    in: &context,
-                    size: size,
-                    time: reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                )
-            }
+        Canvas(opaque: false, rendersAsynchronously: true) { context, size in
+            drawParticles(
+                in: &context,
+                size: size,
+                time: Date.now.timeIntervalSinceReferenceDate
+            )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -352,26 +339,15 @@ private struct ParticleGlassBorder: View {
                 let yUnit = signedPower(sin(angle), exponent: 0.36)
                 let x = Double(center.x) + (Double(size.width) / 2 - inset) * xUnit
                 let y = Double(center.y) + (Double(size.height) / 2 - inset) * yUnit
-                let hover = hoverInfluence(at: CGPoint(x: x, y: y), size: size)
 
                 let movingHighlight = max(0, cos(angle - phase))
                 let highlight = pow(movingHighlight, 8)
                 let diameter = 0.8 + Double((index + lane) % 4) * 0.18 + highlight * 0.9
                 let opacity = min(1, (isLight ? 0.32 : 0.46)
                     + Double(lanes - lane) * 0.055
-                    + highlight * 0.26
-                    + hover * 0.18)
+                    + highlight * 0.26)
 
                 drawDot(in: &context, x: x, y: y, diameter: diameter, opacity: opacity)
-                if hover > 0.22 {
-                    drawDot(
-                        in: &context,
-                        x: x + sin(angle) * 0.75,
-                        y: y - cos(angle) * 0.75,
-                        diameter: diameter * 0.72,
-                        opacity: opacity * hover
-                    )
-                }
             }
         }
 
@@ -401,45 +377,27 @@ private struct ParticleGlassBorder: View {
             let yUnit = signedPower(sin(angle), exponent: 0.36)
             let x = Double(center.x) + (Double(size.width) / 2 - 2.8) * xUnit
             let y = Double(center.y) + (Double(size.height) / 2 - 2.8) * yUnit
-            let point = CGPoint(x: x, y: y)
-            let hover = hoverInfluence(at: point, size: size)
-            let stride = hover > 0.35 ? 3 : 9
-            guard index.isMultiple(of: stride) else { continue }
+            guard index.isMultiple(of: 9) else { continue }
 
             let normal = normalized(
                 dx: x - Double(center.x),
                 dy: y - Double(center.y)
             )
             let life = ParticleMotion.unitPhase(phase / (2 * .pi) + progress * 1.7)
-            let drift = 3.5 + life * (8 + hover * 10)
-            let turbulence = sin(Double(index) * 2.17 + phase) * (0.7 + hover)
+            let drift = 3.5 + life * 8
+            let turbulence = sin(Double(index) * 2.17 + phase) * 0.7
             let detachedX = x + normal.dx * drift - normal.dy * turbulence
             let detachedY = y + normal.dy * drift + normal.dx * turbulence
-            let opacity = (1 - life) * (isLight ? 0.38 : 0.58) * (0.72 + hover * 0.5)
+            let opacity = (1 - life) * (isLight ? 0.38 : 0.58) * 0.72
 
             drawDot(
                 in: &context,
                 x: detachedX,
                 y: detachedY,
-                diameter: 0.75 + hover * 0.65,
+                diameter: 0.75,
                 opacity: opacity
             )
         }
-    }
-
-    private func hoverInfluence(at point: CGPoint, size: CGSize) -> Double {
-        guard let pointerLocation = hoverState?.location else { return 0 }
-        let distance = hypot(point.x - pointerLocation.x, point.y - pointerLocation.y)
-        let nearestEdgeDistance = min(
-            pointerLocation.x,
-            size.width - pointerLocation.x,
-            pointerLocation.y,
-            size.height - pointerLocation.y
-        )
-        return ParticleMotion.hoverInfluence(
-            distance: distance,
-            nearestEdgeDistance: nearestEdgeDistance
-        )
     }
 
     private func drawDot(
@@ -480,14 +438,13 @@ private struct ParticleTipEmitter: View {
     let shape: ParticleTipShape
     let color: ParticleColorSettings
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 24, paused: reduceMotion)) { timeline in
-            Canvas(opaque: false, rendersAsynchronously: true) { context, size in
-                let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                drawParticles(in: &context, size: size, time: time)
-            }
+        Canvas(opaque: false, rendersAsynchronously: true) { context, size in
+            drawParticles(
+                in: &context,
+                size: size,
+                time: Date.now.timeIntervalSinceReferenceDate
+            )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
