@@ -5,13 +5,20 @@ app="${1:?Usage: $0 <Codex Quota.app>}"
 widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
 app_metadata="$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
 widget_metadata="$widget/Contents/Resources/Metadata.appintents/extract.actionsdata"
+app_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")
+widget_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$widget/Contents/Info.plist")
 
 echo 'Checking widget gallery registration…'
 test -d "$widget"
 test -x "$widget/Contents/MacOS/CodexQuotaWidgetExtension"
 test "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$widget/Contents/Info.plist")" = 'com.apple.widgetkit-extension'
 test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$widget/Contents/Info.plist")" = 'dev.codexquota.app.widget'
-test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")" = "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$widget/Contents/Info.plist")"
+test "$app_build" = "$widget_build"
+installed_app="/Applications/Codex Quota.app"
+if [ -d "$installed_app" ] && [ "$app" != "$installed_app" ]; then
+  installed_build=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$installed_app/Contents/Info.plist")
+  test "$app_build" -gt "$installed_build"
+fi
 plutil -convert json -o - "$app_metadata" | grep 'AppearanceV3ConfigurationIntent'
 plutil -convert json -o - "$widget_metadata" | grep 'AppearanceV3ConfigurationIntent'
 plutil -convert json -o - "$widget_metadata" | grep 'useLightAppearance'
