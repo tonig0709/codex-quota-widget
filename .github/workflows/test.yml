@@ -30,6 +30,7 @@ jobs:
           metadata="$widget/Contents/Resources/Metadata.appintents/extract.actionsdata"
           plutil -convert json -o - "$app_metadata" | grep 'AppearanceV3ConfigurationIntent'
           plutil -convert json -o - "$metadata" | grep 'AppearanceV3ConfigurationIntent'
+          plutil -convert json -o - "$metadata" | grep 'useParticleTheme'
           plutil -convert json -o - "$metadata" | grep 'useLightAppearance'
           plutil -convert json -o - "$metadata" | grep 'glassOpacity'
           plutil -convert json -o - "$metadata" | grep '玻璃不透明度'
@@ -88,7 +89,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: Codex-Quota-particle-preview-build18
+          name: Codex-Quota-particle-preview-build19
           path: Codex-Quota-test.dmg
           if-no-files-found: error
           retention-days: 1

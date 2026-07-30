@@ -6,7 +6,7 @@ struct CodexQuotaEntry: TimelineEntry {
     let date: Date
     let snapshot: UsageSnapshot
     let glassOpacity: Double
-    let visualTheme: WidgetVisualTheme
+    let usesParticles: Bool
     let particleColor: ParticleColorSettings
 }
 
@@ -18,7 +18,7 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
             date: .now,
             snapshot: .placeholder,
             glassOpacity: WidgetGlassOpacity.defaultValue,
-            visualTheme: .classic,
+            usesParticles: false,
             particleColor: .defaultValue
         )
     }
@@ -57,7 +57,7 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
             date: .now,
             snapshot: snapshot,
             glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity),
-            visualTheme: configuration.visualTheme,
+            usesParticles: configuration.useParticleTheme,
             particleColor: ParticleColorSettings(
                 hue: configuration.particleHue,
                 saturation: configuration.particleSaturation,
@@ -93,14 +93,14 @@ private struct ConfiguredQuotaWidgetView: View {
                 QuotaRingWidgetView(
                     snapshot: entry.snapshot,
                     glassOpacity: entry.glassOpacity,
-                    usesParticles: entry.visualTheme == .particle,
+                    usesParticles: entry.usesParticles,
                     particleColor: entry.particleColor
                 )
             } else {
                 QuotaWidgetView(
                     snapshot: entry.snapshot,
                     glassOpacity: entry.glassOpacity,
-                    usesParticles: entry.visualTheme == .particle,
+                    usesParticles: entry.usesParticles,
                     particleColor: entry.particleColor
                 )
             }
@@ -110,7 +110,7 @@ private struct ConfiguredQuotaWidgetView: View {
                 isLight: entry.snapshot.resolvedAppearance == .light,
                 opacity: entry.glassOpacity,
                 accent: isSmall ? .green : .blue,
-                usesParticles: entry.visualTheme == .particle,
+                usesParticles: entry.usesParticles,
                 particleColor: entry.particleColor
             )
         }
