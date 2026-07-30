@@ -490,7 +490,7 @@ private struct ParticleTipEmitter: View {
                 CGVector(dx: 1, dy: 0)
             )
         case .ring(let progress):
-            let angle = -.pi / 2 + 2 * .pi * max(0, min(1, progress))
+            let angle: CGFloat = -.pi / 2 + 2 * .pi * max(0, min(1, progress))
             let radius = min(size.width, size.height) / 2 - 8
             return (
                 CGPoint(
