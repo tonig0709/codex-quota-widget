@@ -1,6 +1,7 @@
 name: Test
 
 on:
+  workflow_dispatch:
   push:
   pull_request:
 
@@ -17,6 +18,8 @@ jobs:
             -scheme CodexQuota \
             -configuration Release \
             -derivedDataPath "$PWD/build" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             clean build
       - name: Check widget configuration metadata
@@ -81,3 +84,11 @@ jobs:
           hdiutil create -volname "Codex Quota" -srcfolder "$PWD/dmg-root" \
             -ov -format UDZO "$PWD/Codex-Quota-test.dmg"
           hdiutil verify "$PWD/Codex-Quota-test.dmg"
+      - name: Upload local preview DMG
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Codex-Quota-particle-preview-build17
+          path: Codex-Quota-test.dmg
+          if-no-files-found: error
+          retention-days: 1

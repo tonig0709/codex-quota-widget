@@ -98,6 +98,38 @@ public enum WidgetGlassOpacity {
     }
 }
 
+public struct ParticleColorSettings: Equatable, Sendable {
+    public let hue: Double
+    public let saturation: Double
+    public let brightness: Double
+
+    public init(hue: Double, saturation: Double, brightness: Double) {
+        self.hue = min(1, max(0, hue))
+        self.saturation = min(1, max(0, saturation))
+        self.brightness = min(1, max(0.2, brightness))
+    }
+
+    public static let defaultValue = ParticleColorSettings(
+        hue: 0.69,
+        saturation: 0.82,
+        brightness: 0.96
+    )
+}
+
+public enum ParticleMotion {
+    public static func unitPhase(_ value: Double) -> Double {
+        let remainder = value.truncatingRemainder(dividingBy: 1)
+        return remainder >= 0 ? remainder : remainder + 1
+    }
+
+    public static func hoverInfluence(
+        distance: Double,
+        nearestEdgeDistance: Double
+    ) -> Double {
+        max(0, min(1, 1 - max(0, distance - nearestEdgeDistance) / 70))
+    }
+}
+
 public enum SnapshotStore {
     public static let smallWidgetKind = "dev.codexquota.widget.small.v3"
     public static let largeWidgetKind = "dev.codexquota.widget.large.v3"

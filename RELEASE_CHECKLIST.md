@@ -5,6 +5,8 @@ created. The automated gate rejects a release if any of these checks fail:
 
 - the widget extension is embedded, version-matched, and declares both small
   and large widget kinds, so macOS can list it in the widget gallery;
+- a local candidate uses a higher build number than the installed app, so
+  WidgetKit cannot reuse a stale gallery description for the same build;
 - the installed-app registration repair and App Translocation guard are present;
 - each widget has a real container background and the known black-screen
   fallback contract is intact;
