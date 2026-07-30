@@ -37,6 +37,8 @@ grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
 ! grep 'Color(red: 0.04' Shared/QuotaWidgetView.swift
 grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
 grep 'WidgetSurface(' Widget/CodexQuotaWidget.swift
+grep 'onContinuousHover' Widget/CodexQuotaWidget.swift
+grep 'ParticleTipEmitter' Shared/QuotaWidgetView.swift
 ! grep 'Color.clear' Widget/CodexQuotaWidget.swift
 
 echo 'Checking widget synchronization contract…'

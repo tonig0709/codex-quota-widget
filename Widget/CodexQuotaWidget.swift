@@ -83,19 +83,55 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     }
 }
 
+private struct ConfiguredQuotaWidgetView: View {
+    let entry: CodexQuotaEntry
+    let isSmall: Bool
+
+    private let hoverState = ParticleHoverState()
+
+    var body: some View {
+        Group {
+            if isSmall {
+                QuotaRingWidgetView(
+                    snapshot: entry.snapshot,
+                    glassOpacity: entry.glassOpacity,
+                    usesParticles: entry.visualTheme == .particle,
+                    particleColor: entry.particleColor
+                )
+            } else {
+                QuotaWidgetView(
+                    snapshot: entry.snapshot,
+                    glassOpacity: entry.glassOpacity,
+                    usesParticles: entry.visualTheme == .particle,
+                    particleColor: entry.particleColor
+                )
+            }
+        }
+        .containerBackground(for: .widget) {
+            WidgetSurface(
+                isLight: entry.snapshot.resolvedAppearance == .light,
+                opacity: entry.glassOpacity,
+                accent: isSmall ? .green : .blue,
+                usesParticles: entry.visualTheme == .particle,
+                particleColor: entry.particleColor,
+                hoverState: hoverState
+            )
+        }
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let location):
+                hoverState.location = location
+            case .ended:
+                hoverState.location = nil
+            }
+        }
+    }
+}
+
 struct SmallCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.smallWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            QuotaRingWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
-                .containerBackground(for: .widget) {
-                    WidgetSurface(
-                        isLight: entry.snapshot.resolvedAppearance == .light,
-                        opacity: entry.glassOpacity,
-                        accent: .green,
-                        usesParticles: entry.visualTheme == .particle,
-                        particleColor: entry.particleColor
-                    )
-                }
+            ConfiguredQuotaWidgetView(entry: entry, isSmall: true)
         }
         .configurationDisplayName("Codex Quota · 小型")
         .description("以双圆环显示 Codex 5h 与周额度剩余比例。")
@@ -107,16 +143,7 @@ struct SmallCodexQuotaWidget: Widget {
 struct LargeCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.largeWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            QuotaWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
-                .containerBackground(for: .widget) {
-                    WidgetSurface(
-                        isLight: entry.snapshot.resolvedAppearance == .light,
-                        opacity: entry.glassOpacity,
-                        accent: .blue,
-                        usesParticles: entry.visualTheme == .particle,
-                        particleColor: entry.particleColor
-                    )
-                }
+            ConfiguredQuotaWidgetView(entry: entry, isSmall: false)
         }
         .configurationDisplayName("Codex Quota · 大型")
         .description("查看 Codex 5h、周额度与近七天 Token 用量。")

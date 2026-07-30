@@ -116,6 +116,20 @@ public struct ParticleColorSettings: Equatable, Sendable {
     )
 }
 
+public enum ParticleMotion {
+    public static func unitPhase(_ value: Double) -> Double {
+        let remainder = value.truncatingRemainder(dividingBy: 1)
+        return remainder >= 0 ? remainder : remainder + 1
+    }
+
+    public static func hoverInfluence(
+        distance: Double,
+        nearestEdgeDistance: Double
+    ) -> Double {
+        max(0, min(1, 1 - max(0, distance - nearestEdgeDistance) / 70))
+    }
+}
+
 public enum SnapshotStore {
     public static let smallWidgetKind = "dev.codexquota.widget.small.v3"
     public static let largeWidgetKind = "dev.codexquota.widget.large.v3"
