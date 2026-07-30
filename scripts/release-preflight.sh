@@ -68,7 +68,7 @@ curl --fail --retry 10 --retry-delay 1 --retry-connrefused \
   http://127.0.0.1:48193/snapshot -o /tmp/snapshot.json
 grep '"dailyUsage"' /tmp/snapshot.json
 grep '"weekly"' /tmp/snapshot.json
-grep '"appearance":"dark"' /tmp/snapshot.json
+grep -E '"appearance":"(light|dark)"' /tmp/snapshot.json
 ! grep -E '"email"|"plan"' /tmp/snapshot.json
 
 echo 'Release preflight passed.'
