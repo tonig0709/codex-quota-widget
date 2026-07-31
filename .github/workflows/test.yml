@@ -54,9 +54,13 @@ jobs:
       - name: Check local snapshot bridge
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"
+          python3 -c 'import socket,time; s=socket.socket(); s.bind(("127.0.0.1",48193)); s.listen(); time.sleep(4)' &
+          blocker_pid=$!
           "$app/Contents/MacOS/Codex Quota" >/tmp/codex-quota.log 2>&1 &
           app_pid=$!
-          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          trap 'kill "$blocker_pid" "$app_pid" 2>/dev/null || true' EXIT
+          sleep 2
+          kill "$blocker_pid"
           curl --fail --retry 10 --retry-delay 1 --retry-connrefused \
             http://127.0.0.1:48193/snapshot -o /tmp/snapshot.json
           grep '"dailyUsage"' /tmp/snapshot.json

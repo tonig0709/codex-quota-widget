@@ -11,11 +11,33 @@ private final class SnapshotServer {
     private var listener: NWListener?
 
     func start() {
+        queue.async { [weak self] in
+            self?.startOnQueue()
+        }
+    }
+
+    private func startOnQueue() {
         guard listener == nil else { return }
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: Self.port)
-        guard let listener = try? NWListener(using: parameters) else { return }
-        listener.newConnectionHandler = { [queue] connection in
+        let newListener: NWListener
+        do {
+            newListener = try NWListener(using: parameters)
+        } catch {
+            retry()
+            return
+        }
+        newListener.stateUpdateHandler = { [weak self, weak newListener] state in
+            guard let self, let newListener, self.listener === newListener else { return }
+            switch state {
+            case .failed, .cancelled:
+                self.listener = nil
+                self.retry()
+            default:
+                break
+            }
+        }
+        newListener.newConnectionHandler = { [queue] connection in
             connection.start(queue: queue)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { data, _, _, _ in
                 let request = data.flatMap { String(data: $0, encoding: .utf8) }
@@ -30,8 +52,14 @@ private final class SnapshotServer {
                 connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
             }
         }
-        listener.start(queue: queue)
-        self.listener = listener
+        listener = newListener
+        newListener.start(queue: queue)
+    }
+
+    private func retry() {
+        queue.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.startOnQueue()
+        }
     }
 }
 
@@ -121,9 +149,10 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.5.0"
+                    "version": "0.5.1"
                 ]
             ])
+            refreshTimer?.invalidate()
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
                 Task { @MainActor in self?.refresh() }
             }
@@ -249,6 +278,7 @@ final class CodexAppServer: ObservableObject {
     private func persist() {
         snapshot.updatedAt = .now
         SnapshotStore.save(snapshot)
+        snapshotServer.start()
         WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)
         WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)
     }

@@ -41,6 +41,8 @@ grep 'snapshot.fiveHour' App/CodexAppServer.swift
 grep 'quotaRing(title: "5h"' Shared/QuotaWidgetView.swift
 grep 'quotaSection(title: "5h额度"' Shared/QuotaWidgetView.swift
 grep 'withTimeInterval: 15' App/CodexAppServer.swift
+grep 'private func retry()' App/CodexAppServer.swift
+grep 'snapshotServer.start()' App/CodexAppServer.swift
 grep 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexAppServer.swift
 grep 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift
 grep 'reloadIgnoringLocalCacheData' Widget/CodexQuotaWidget.swift
