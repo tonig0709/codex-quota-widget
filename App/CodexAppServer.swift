@@ -100,7 +100,7 @@ final class CodexAppServer: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor [weak self] in self?.refresh() }
         }
     }
 
@@ -128,15 +128,16 @@ final class CodexAppServer: ObservableObject {
         process.standardOutput = stdout
         process.standardError = FileHandle.nullDevice
         process.terminationHandler = { [weak self] task in
-            Task { @MainActor in
+            let status = task.terminationStatus
+            Task { @MainActor [weak self] in
                 self?.process = nil
                 self?.input = nil
                 self?.refreshTimeout?.cancel()
                 self?.refreshTimeout = nil
                 self?.pendingRefresh = nil
                 self?.refreshQueued = false
-                if task.terminationStatus != 0 {
-                    self?.state = .failed("Codex app-server 已退出（\(task.terminationStatus)）")
+                if status != 0 {
+                    self?.state = .failed("Codex app-server 已退出（\(status)）")
                 }
             }
         }
@@ -144,7 +145,7 @@ final class CodexAppServer: ObservableObject {
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-            Task { @MainActor in self?.consume(data) }
+            Task { @MainActor [weak self] in self?.consume(data) }
         }
 
         do {
@@ -160,7 +161,7 @@ final class CodexAppServer: ObservableObject {
             ])
             refreshTimer?.invalidate()
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.refresh() }
+                Task { @MainActor [weak self] in self?.refresh() }
             }
         } catch {
             state = .failed(error.localizedDescription)
