@@ -93,7 +93,6 @@ final class CodexAppServer: ObservableObject {
     private let snapshotServer = SnapshotServer()
 
     init() {
-        snapshotServer.start()
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
@@ -110,6 +109,7 @@ final class CodexAppServer: ObservableObject {
     }
 
     func connect() {
+        snapshotServer.start()
         guard process == nil else { refresh() ; return }
         guard let executable = findCodex() else {
             state = .failed("未找到 Codex CLI。请先安装 Codex 或 ChatGPT for Mac。")

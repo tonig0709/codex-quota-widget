@@ -1,29 +1,42 @@
 # Release checklist
 
-Every tagged release runs `scripts/release-preflight.sh` before a DMG can be
-created. The automated gate rejects a release if any of these checks fail:
+Every push and pull request, every version tag, and the final signed release
+payload run the same gate:
 
-- the widget extension is embedded, version-matched, and declares both small
-  and large widget kinds, so macOS can list it in the widget gallery;
-- the installed-app registration repair and App Translocation guard are present;
-- each widget has a real container background and the known black-screen
-  fallback contract is intact;
-- 5h quota, weekly quota, and seven-day usage are committed as one snapshot; both widget sizes
-  receive a targeted refresh, cached HTTP data is bypassed, and a one-minute
-  timeline fallback remains enabled;
-- the localhost snapshot endpoint returns usage data without email or plan data.
+```sh
+./scripts/release-preflight.sh "/path/to/Codex Quota.app" "/path/to/Codex-Quota.dmg"
+```
 
-Before announcing a release, complete this short visual smoke test on a Mac:
+The gate blocks release unless all of these pass:
 
-- [ ] Drag the new app into **Applications**, eject the DMG, and launch that copy.
-- [ ] Open **Edit Widgets**, search **Codex Quota**, and confirm both **小型** and
-      **大型** can be added.
-- [ ] Confirm neither size is black or blank in both light and dark appearance.
-- [ ] Confirm the small widget shows separate 5h and weekly rings, and the large
+- **Widget gallery:** the signed universal extension is embedded, version
+  matched, AppIntent metadata is valid, both sizes exist, and Apple's
+  `pluginkit` registry reports exactly one enabled extension at the tested
+  installed-app path.
+- **No black or blank widget:** SwiftUI renders small/large × light/dark into
+  four bitmaps and verifies visible pixels plus foreground contrast.
+- **Live synchronization:** a deterministic fake Codex app-server proves the
+  full initialize/account/rate-limit/usage path, forced port-collision recovery,
+  15-second A→B refresh, advancing `updatedAt`, cache prevention, and removal of
+  account identity from the widget snapshot.
+- **Update safety:** the bundle build is greater than every existing release
+  tag; temporary DMG/build copies cannot run registration repair or occupy
+  port 48193.
+- **Release artifact:** app/widget signatures and `arm64` + `x86_64` slices are
+  valid, and the DMG contains the same signed version and build.
+
+## Final desktop smoke test
+
+The automated checks use Apple's registration database and off-screen
+rendering, but a headless GitHub runner cannot click the widget gallery or
+inspect the live desktop compositor. Before announcing a release:
+
+- [ ] Remove prior test builds, drag the new app into **Applications**, eject
+      the DMG, and launch only that copy.
+- [ ] Open **Edit Widgets**, search **Codex Quota**, and add both **小型** and
+      **大型**.
+- [ ] Confirm neither size is black or blank in light and dark appearance.
+- [ ] Confirm the small widget shows separate 5h and weekly rings and the large
       widget shows 5h above weekly quota.
-- [ ] Use **立即刷新**, then confirm quota and seven-day trend update within one
-      minute after new Codex usage is available.
-
-The automated gate runs on every tag; this final smoke test covers the desktop
-compositor and widget gallery UI, which GitHub's headless macOS runner cannot
-reliably open.
+- [ ] Generate new Codex usage and confirm quota plus seven-day trend update
+      within one minute.

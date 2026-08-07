@@ -12,8 +12,10 @@ enum WidgetRepairService {
     private static let launchServicesTool = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
     static var requiresInstalledCopy: Bool {
-        Bundle.main.bundleURL.path.contains("/AppTranslocation/") ||
-        Bundle.main.bundleURL.path.hasPrefix("/Volumes/")
+        let path = Bundle.main.bundleURL.resolvingSymlinksInPath().path
+        let userApplications = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Applications", isDirectory: true).path + "/"
+        return !path.hasPrefix("/Applications/") && !path.hasPrefix(userApplications)
     }
 
     static func repair() {
@@ -36,6 +38,7 @@ enum WidgetRepairService {
                 run(launchServicesTool, arguments: ["-f", appURL.path])
                 if FileManager.default.fileExists(atPath: widgetURL.path) {
                     run("/usr/bin/pluginkit", arguments: ["-a", widgetURL.path])
+                    run("/usr/bin/pluginkit", arguments: ["-e", "use", "-i", extensionIdentifier])
                 }
                 UserDefaults.standard.set(build, forKey: lastVerifiedBuildKey)
             }
@@ -54,8 +57,11 @@ enum WidgetRepairService {
     }
 
     private static func isCurrentWidgetRegistered(at widgetURL: URL) -> Bool {
-        let output = output("/usr/bin/pluginkit", arguments: ["-m", "-A", "-D", "-i", extensionIdentifier])
-        return output.contains(widgetURL.path)
+        let output = output("/usr/bin/pluginkit", arguments: ["-m", "-A", "-v", "-i", extensionIdentifier])
+        let registrations = output.split(separator: "\n").filter { $0.contains(extensionIdentifier) }
+        guard registrations.count == 1, let registration = registrations.first else { return false }
+        return registration.trimmingCharacters(in: .whitespaces).hasPrefix("+") &&
+            registration.contains(widgetURL.resolvingSymlinksInPath().path)
     }
 
     private static func output(_ executable: String, arguments: [String]) -> String {

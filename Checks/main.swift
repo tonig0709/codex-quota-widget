@@ -1,5 +1,9 @@
 import CodexQuotaCore
 import Foundation
+#if canImport(AppKit)
+import AppKit
+import SwiftUI
+#endif
 
 let rateData = Data(#"{"id":3,"result":{"rateLimits":{"primary":{"usedPercent":20,"windowDurationMins":300},"secondary":{"usedPercent":28,"windowDurationMins":10080,"resetsAt":1800000000}}}}"#.utf8)
 let rateLimits = try AppServerParser.rateLimitWindows(from: AppServerParser.object(from: rateData))
@@ -27,4 +31,76 @@ precondition(UsageSnapshot.placeholder.resolvedAppearance == .dark)
 precondition(SnapshotStore.smallWidgetKind == "dev.codexquota.widget.small.v3")
 precondition(SnapshotStore.largeWidgetKind == "dev.codexquota.widget.large.v3")
 
-print("Quota parser and threshold checks passed.")
+#if canImport(AppKit)
+@MainActor
+func checkRender<V: View>(_ view: V, width: CGFloat, height: CGFloat, isLight: Bool) {
+    let renderer = ImageRenderer(content: view.frame(width: width, height: height))
+    renderer.scale = 1
+    guard let image = renderer.nsImage,
+          let data = image.tiffRepresentation,
+          let bitmap = NSBitmapImageRep(data: data)
+    else { preconditionFailure("Widget render produced no image") }
+
+    var visiblePixels = 0
+    var foregroundPixels = 0
+    for y in 0..<bitmap.pixelsHigh {
+        for x in 0..<bitmap.pixelsWide {
+            guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
+            if color.alphaComponent > 0.1 { visiblePixels += 1 }
+            let high = max(color.redComponent, color.greenComponent, color.blueComponent)
+            let low = min(color.redComponent, color.greenComponent, color.blueComponent)
+            if isLight ? low < 0.55 : high > 0.45 { foregroundPixels += 1 }
+        }
+    }
+
+    let pixelCount = bitmap.pixelsWide * bitmap.pixelsHigh
+    precondition(visiblePixels > pixelCount * 9 / 10, "Widget render is blank or transparent")
+    precondition(foregroundPixels > pixelCount / 200, "Widget render is a solid surface with no visible content")
+}
+
+MainActor.assumeIsolated {
+    var dark = UsageSnapshot.placeholder
+    dark.appearance = .dark
+    var light = UsageSnapshot.placeholder
+    light.appearance = .light
+
+    checkRender(
+        ZStack {
+            LiquidGlassSurface(isLight: false, opacity: 0.86, accent: .green)
+            QuotaRingWidgetView(snapshot: dark)
+        },
+        width: 164,
+        height: 164,
+        isLight: false
+    )
+    checkRender(
+        ZStack {
+            LiquidGlassSurface(isLight: true, opacity: 0.86, accent: .green)
+            QuotaRingWidgetView(snapshot: light)
+        },
+        width: 164,
+        height: 164,
+        isLight: true
+    )
+    checkRender(
+        ZStack {
+            LiquidGlassSurface(isLight: false, opacity: 0.86, accent: .blue)
+            QuotaWidgetView(snapshot: dark)
+        },
+        width: 704,
+        height: 344,
+        isLight: false
+    )
+    checkRender(
+        ZStack {
+            LiquidGlassSurface(isLight: true, opacity: 0.86, accent: .blue)
+            QuotaWidgetView(snapshot: light)
+        },
+        width: 704,
+        height: 344,
+        isLight: true
+    )
+}
+#endif
+
+print("Quota parser, thresholds, and widget renders passed.")

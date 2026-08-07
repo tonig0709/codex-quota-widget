@@ -13,6 +13,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Build app and widget
         run: |
           xcodebuild \
@@ -20,8 +22,18 @@ jobs:
             -scheme CodexQuota \
             -configuration Release \
             -derivedDataPath "$PWD/preflight-build" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             clean build
+      - name: Apply ad-hoc signature
+        run: |
+          app="$PWD/preflight-build/Build/Products/Release/Codex Quota.app"
+          widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          codesign --force --sign - \
+            --entitlements Widget/CodexQuotaWidget.entitlements "$widget"
+          codesign --force --sign - \
+            --entitlements App/CodexQuota.entitlements "$app"
       - name: Release preflight checklist
         run: ./scripts/release-preflight.sh "$PWD/preflight-build/Build/Products/Release/Codex Quota.app"
 
@@ -40,6 +52,8 @@ jobs:
       APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Reject incomplete signing configuration
         if: env.ANY_SIGNING_SECRET == 'true' && env.SIGNED_RELEASE != 'true'
@@ -67,6 +81,8 @@ jobs:
             -scheme CodexQuota \
             -configuration Release \
             -derivedDataPath "$PWD/build" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             clean build
 
@@ -107,6 +123,12 @@ jobs:
           ln -s /Applications "$PWD/dmg-root/Applications"
           hdiutil create -volname "Codex Quota" -srcfolder "$PWD/dmg-root" \
             -ov -format UDZO "$dmg"
+
+      - name: Run release bug gate on final signed payload
+        run: |
+          ./scripts/release-preflight.sh \
+            "$PWD/build/Build/Products/Release/Codex Quota.app" \
+            "$PWD/Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
 
       - name: Notarize and staple DMG
         if: env.SIGNED_RELEASE == 'true'
