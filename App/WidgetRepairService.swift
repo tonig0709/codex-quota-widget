@@ -49,9 +49,9 @@ enum WidgetRepairService {
                 case .unavailable:
                     return
                 case .newerBuildPresent:
-                    // LaunchServices can discover an older app merely because it was opened.
-                    // Remove only this older copy and leave the newer registered build intact.
-                    run("/usr/bin/pluginkit", arguments: ["-r", widgetURL.path])
+                    // Never mutate PlugInKit after detecting a newer build. On macOS 15,
+                    // unregistering this older path can still displace the active entry
+                    // because both extensions share the same bundle identifier.
                     return
                 case .proceed:
                     break
