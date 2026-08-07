@@ -6,7 +6,11 @@ on:
 
 jobs:
   release-gate:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,6 +47,8 @@ jobs:
             -ov -format UDZO "$PWD/Codex-Quota-test.dmg"
 
       - name: Run release bug gate
+        env:
+          CODEX_QUOTA_ISOLATED_REGISTRY: "1"
         run: |
           ./scripts/release-preflight.sh \
             "$PWD/build/Build/Products/Release/Codex Quota.app" \

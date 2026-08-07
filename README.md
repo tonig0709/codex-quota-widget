@@ -3,8 +3,8 @@
 A native macOS menu bar app and desktop widget for checking your Codex weekly
 quota and seven-day Token usage at a glance.
 
-**Latest release: [v0.5.0](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.5.0)** ·
-[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.5.0/Codex-Quota-v0.5.0-macOS.dmg)
+**Latest release: [v0.5.1](https://github.com/tonig0709/codex-quota-widget/releases/tag/v0.5.1)** ·
+[Download the macOS DMG](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.5.1/Codex-Quota-v0.5.1-macOS.dmg)
 
 ## What it shows
 
@@ -20,7 +20,7 @@ data while Codex remains in charge of login.
 
 ## Install in two minutes
 
-1. Download [Codex-Quota-v0.5.0-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.5.0/Codex-Quota-v0.5.0-macOS.dmg).
+1. Download [Codex-Quota-v0.5.1-macOS.dmg](https://github.com/tonig0709/codex-quota-widget/releases/download/v0.5.1/Codex-Quota-v0.5.1-macOS.dmg).
 2. Open the DMG and drag **Codex Quota.app** to **Applications**.
 3. Eject the DMG, then open **Codex Quota** from **Applications** or Launchpad.
    Do not run the app directly from the DMG: macOS may isolate that copy and
@@ -55,11 +55,14 @@ copy; macOS does not reliably list widgets from translocated apps.
 ## Live-data behavior
 
 Codex Quota starts the locally installed `codex app-server`, polls the account
-every 15 seconds, and commits the weekly quota and seven-day usage result as
-one snapshot before refreshing both widget sizes. Each widget also retries its
-own local refresh within one minute if macOS coalesces the immediate request.
-WidgetKit ultimately controls desktop refresh timing, so the trend is
-near-real-time rather than a guaranteed per-second display.
+every 15 seconds, and normally commits the 5h quota, weekly quota, and seven-day
+usage as one snapshot before refreshing both widget sizes. Refreshes are queued
+instead of replacing an in-flight request; if the trend endpoint does not answer
+within 10 seconds, fresh quota data is still published without erasing the last
+valid trend. Each widget also retries its own local refresh within one minute if
+macOS coalesces the immediate request. WidgetKit ultimately controls desktop
+refresh timing, so the trend is near-real-time rather than a guaranteed
+per-second display.
 
 ## Privacy and security
 

@@ -4,7 +4,7 @@ import Foundation
 import Network
 import WidgetKit
 
-private final class SnapshotServer {
+private final class SnapshotServer: @unchecked Sendable {
     static let port: NWEndpoint.Port = 48_193
 
     private let queue = DispatchQueue(label: "dev.codexquota.snapshot")
@@ -89,6 +89,8 @@ final class CodexAppServer: ObservableObject {
     private var refreshTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
     private var pendingRefresh: PendingRefresh?
+    private var refreshQueued = false
+    private var refreshTimeout: DispatchWorkItem?
     private var nextRequestID = 3
     private let snapshotServer = SnapshotServer()
 
@@ -129,6 +131,10 @@ final class CodexAppServer: ObservableObject {
             Task { @MainActor in
                 self?.process = nil
                 self?.input = nil
+                self?.refreshTimeout?.cancel()
+                self?.refreshTimeout = nil
+                self?.pendingRefresh = nil
+                self?.refreshQueued = false
                 if task.terminationStatus != 0 {
                     self?.state = .failed("Codex app-server 已退出（\(task.terminationStatus)）")
                 }
@@ -149,7 +155,7 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.5.1"
+                    "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
                 ]
             ])
             refreshTimer?.invalidate()
@@ -164,6 +170,10 @@ final class CodexAppServer: ObservableObject {
     func disconnect() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        refreshTimeout?.cancel()
+        refreshTimeout = nil
+        pendingRefresh = nil
+        refreshQueued = false
         input?.closeFile()
         process?.terminate()
         process = nil
@@ -173,6 +183,15 @@ final class CodexAppServer: ObservableObject {
 
     func refresh() {
         guard process != nil else { connect(); return }
+        guard pendingRefresh == nil else {
+            refreshQueued = true
+            return
+        }
+
+        beginRefresh()
+    }
+
+    private func beginRefresh() {
         let rateLimitRequestID = nextRequestID
         let usageRequestID = nextRequestID + 1
         nextRequestID += 2
@@ -183,19 +202,22 @@ final class CodexAppServer: ObservableObject {
         send(method: "account/rateLimits/read", id: rateLimitRequestID)
         send(method: "account/usage/read", id: usageRequestID)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.commitPendingRefreshIfReady(
+        let timeout = DispatchWorkItem { [weak self] in
+            self?.finishPendingRefresh(
                 rateLimitRequestID: rateLimitRequestID,
                 usageRequestID: usageRequestID,
                 allowPartial: true
             )
         }
+        refreshTimeout?.cancel()
+        refreshTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeout)
     }
 
     func setAppearance(_ appearance: WidgetAppearance) {
         guard snapshot.resolvedAppearance != appearance else { return }
         snapshot.appearance = appearance
-        persist()
+        persist(markDataRefresh: false)
     }
 
     private func consume(_ data: Data) {
@@ -263,7 +285,7 @@ final class CodexAppServer: ObservableObject {
             snapshot.email = account.email
             snapshot.plan = account.plan
             state = .connected(account.email)
-            persist()
+            persist(markDataRefresh: false)
             refresh()
         } else {
             state = .signingIn
@@ -275,42 +297,60 @@ final class CodexAppServer: ObservableObject {
         }
     }
 
-    private func persist() {
-        snapshot.updatedAt = .now
+    private func persist(markDataRefresh: Bool) {
+        if markDataRefresh { snapshot.updatedAt = .now }
         SnapshotStore.save(snapshot)
         snapshotServer.start()
         WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)
         WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)
     }
 
-    private func commitPendingRefreshIfReady(
-        rateLimitRequestID: Int? = nil,
-        usageRequestID: Int? = nil,
-        allowPartial: Bool = false
+    private func commitPendingRefreshIfReady() {
+        guard let pending = pendingRefresh,
+              pending.rateLimits != nil,
+              pending.dailyUsage != nil
+        else { return }
+        finishPendingRefresh(
+            rateLimitRequestID: pending.rateLimitRequestID,
+            usageRequestID: pending.usageRequestID,
+            allowPartial: false
+        )
+    }
+
+    private func finishPendingRefresh(
+        rateLimitRequestID: Int,
+        usageRequestID: Int,
+        allowPartial: Bool
     ) {
         guard let pending = pendingRefresh,
-              (rateLimitRequestID == nil || pending.rateLimitRequestID == rateLimitRequestID),
-              (usageRequestID == nil || pending.usageRequestID == usageRequestID),
+              pending.rateLimitRequestID == rateLimitRequestID,
+              pending.usageRequestID == usageRequestID,
               allowPartial || (pending.rateLimits != nil && pending.dailyUsage != nil)
         else { return }
-        pendingRefresh = nil
 
-        var changed = false
+        pendingRefresh = nil
+        refreshTimeout?.cancel()
+        refreshTimeout = nil
+
         if let rateLimits = pending.rateLimits {
             if rateLimits.fiveHour != snapshot.fiveHour {
                 snapshot.fiveHour = rateLimits.fiveHour
-                changed = true
             }
             if rateLimits.weekly != snapshot.weekly {
                 snapshot.weekly = rateLimits.weekly
-                changed = true
             }
         }
         if let dailyUsage = pending.dailyUsage, dailyUsage != snapshot.dailyUsage {
             snapshot.dailyUsage = dailyUsage
-            changed = true
         }
-        if changed { persist() }
+        if pending.rateLimits != nil || pending.dailyUsage != nil {
+            persist(markDataRefresh: true)
+        }
+
+        if refreshQueued {
+            refreshQueued = false
+            beginRefresh()
+        }
     }
 
     private func send(method: String, id: Int? = nil, params: [String: Any]? = nil) {

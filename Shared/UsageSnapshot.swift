@@ -98,6 +98,29 @@ public enum WidgetGlassOpacity {
     }
 }
 
+public enum SnapshotHTTPClient {
+    public static let endpoint = URL(string: "http://127.0.0.1:48193/snapshot")!
+
+    public static func load(from url: URL = endpoint, fallback: UsageSnapshot) async -> UsageSnapshot {
+        var safeFallback = fallback
+        safeFallback.email = nil
+        safeFallback.plan = nil
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 2
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let response = response as? HTTPURLResponse,
+              response.statusCode == 200,
+              response.mimeType == "application/json",
+              var snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data)
+        else { return safeFallback }
+        snapshot.email = nil
+        snapshot.plan = nil
+        return snapshot
+    }
+}
+
 public enum SnapshotStore {
     public static let smallWidgetKind = "dev.codexquota.widget.small.v3"
     public static let largeWidgetKind = "dev.codexquota.widget.large.v3"

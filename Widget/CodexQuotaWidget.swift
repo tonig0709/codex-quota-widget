@@ -9,8 +9,6 @@ struct CodexQuotaEntry: TimelineEntry {
 }
 
 struct CodexQuotaProvider: AppIntentTimelineProvider {
-    private let snapshotURL = URL(string: "http://127.0.0.1:48193/snapshot")!
-
     func placeholder(in context: Context) -> CodexQuotaEntry {
         CodexQuotaEntry(date: .now, snapshot: .placeholder, glassOpacity: WidgetGlassOpacity.defaultValue)
     }
@@ -41,18 +39,8 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
         return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
-    private func loadSnapshot() async -> UsageSnapshot {
-        var request = URLRequest(url: snapshotURL)
-        request.timeoutInterval = 2
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              let response = response as? HTTPURLResponse,
-              response.statusCode == 200,
-              response.mimeType == "application/json",
-              let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) else {
-            return SnapshotStore.load()
-        }
+    func loadSnapshot() async -> UsageSnapshot {
+        let snapshot = await SnapshotHTTPClient.load(fallback: SnapshotStore.load())
         SnapshotStore.save(snapshot)
         return snapshot
     }
@@ -96,6 +84,7 @@ struct LargeCodexQuotaWidget: Widget {
     }
 }
 
+#if !CODEX_QUOTA_PROVIDER_PROBE
 @main
 @MainActor
 struct CodexQuotaWidgetBundle: WidgetBundle {
@@ -104,3 +93,4 @@ struct CodexQuotaWidgetBundle: WidgetBundle {
         LargeCodexQuotaWidget()
     }
 }
+#endif

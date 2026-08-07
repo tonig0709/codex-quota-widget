@@ -4,32 +4,57 @@ Every push and pull request, every version tag, and the final signed release
 payload run the same gate:
 
 ```sh
-./scripts/release-preflight.sh "/path/to/Codex Quota.app" "/path/to/Codex-Quota.dmg"
+CODEX_QUOTA_ISOLATED_REGISTRY=1 \
+  ./scripts/release-preflight.sh "/path/to/Codex Quota.app" "/path/to/Codex-Quota.dmg"
 ```
+
+The full gate intentionally mutates the current user's PlugInKit registry. Run
+it only in a clean CI user with no existing Codex Quota registration. Local
+development can run the non-destructive parser and render checks with
+`swift run quota-self-check`.
 
 The gate blocks release unless all of these pass:
 
-- **Widget gallery:** the signed universal extension is embedded, version
-  matched, AppIntent metadata is valid, both sizes exist, and Apple's
-  `pluginkit` registry reports exactly one enabled extension at the tested
-  installed-app path.
+- **Widget discovery:** the gate seeds an enabled lower-build registration,
+  launches the installed candidate without registering it from the script, and
+  requires the App to remove the stale path and leave exactly one enabled
+  current extension. A second negative control proves that opening an older App
+  cannot displace a higher-build extension. AppIntent metadata, both sizes,
+  assets, ATS, and signed network entitlements are checked on the built extension.
 - **No black or blank widget:** SwiftUI renders small/large × light/dark into
-  four bitmaps and verifies visible pixels plus foreground contrast.
+  all eight family × appearance × opacity-boundary bitmaps. Each result is
+  compared with the same empty glass background, including separate quota and
+  trend regions; a solid-black negative control must fail the same readable-
+  contrast predicate, so a visible border or black surface cannot pass.
 - **Live synchronization:** a deterministic fake Codex app-server proves the
-  full initialize/account/rate-limit/usage path, forced port-collision recovery,
-  15-second A→B refresh, advancing `updatedAt`, cache prevention, and removal of
-  account identity from the widget snapshot.
+  full initialize/account/rate-limit/usage path, a deliberately delayed trend
+  response plus a refresh notification while work is in flight, forced port-
+  collision recovery, candidate process ownership of the bridge, and A→B→C
+  refresh of 5h, weekly, and seven-day data. C deliberately omits trend data to
+  prove quota liveness without erasing B's valid trend. The production
+  `CodexQuotaProvider` is compiled into the probe and executed against A, B, and
+  C, including its default HTTP endpoint, cache prevention, unexpected-route
+  rejection, and identity removal.
 - **Update safety:** the bundle build is greater than every existing release
   tag; temporary DMG/build copies cannot run registration repair or occupy
   port 48193.
 - **Release artifact:** app/widget signatures and `arm64` + `x86_64` slices are
-  valid, and the DMG contains the same signed version and build.
+  valid. After any notarization/stapling mutation, the DMG is verified and its
+  App paths, link targets, permission modes, and file bytes must equal the exact
+  candidate that passed the gate. Both mounted executables and the two-
+  architecture slices are checked again.
+
+The push/PR workflow and the tag workflow's required preflight both run this
+behavioral gate on macOS 14 and macOS 15. Universal slices are built and
+inspected on both runners; runtime behavior is executed on each runner's native
+CPU architecture.
 
 ## Final desktop smoke test
 
-The automated checks use Apple's registration database and off-screen
-rendering, but a headless GitHub runner cannot click the widget gallery or
-inspect the live desktop compositor. Before announcing a release:
+The tag workflow now creates a **draft** Release. Automated checks use Apple's
+registration database and off-screen rendering, but a headless GitHub runner
+cannot click the widget gallery or inspect the live desktop compositor. Before
+publishing that draft:
 
 - [ ] Remove prior test builds, drag the new app into **Applications**, eject
       the DMG, and launch only that copy.
@@ -40,3 +65,4 @@ inspect the live desktop compositor. Before announcing a release:
       widget shows 5h above weekly quota.
 - [ ] Generate new Codex usage and confirm quota plus seven-day trend update
       within one minute.
+- [ ] Only after every item passes, publish the draft Release on GitHub.
