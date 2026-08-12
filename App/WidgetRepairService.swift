@@ -41,6 +41,10 @@ enum WidgetRepairService {
         guard let currentBuild = Int(build) else { return }
 
         queue.async {
+            if let newerWidgetURL = newerInstalledWidget(than: currentBuild) {
+                register(newerWidgetURL)
+                return
+            }
             let registrationMissing = !isCurrentWidgetRegistered(at: widgetURL)
             let buildChanged = UserDefaults.standard.string(forKey: lastVerifiedBuildKey) != build
 
@@ -60,10 +64,7 @@ enum WidgetRepairService {
                 // WidgetKit then rejects the new archive or removes it from the gallery.
                 run("/usr/bin/pkill", arguments: ["-TERM", "-x", extensionExecutable])
                 run(launchServicesTool, arguments: ["-f", appURL.path])
-                if FileManager.default.fileExists(atPath: widgetURL.path) {
-                    run("/usr/bin/pluginkit", arguments: ["-a", widgetURL.path])
-                    run("/usr/bin/pluginkit", arguments: ["-e", "use", "-i", extensionIdentifier])
-                }
+                register(widgetURL)
                 if waitUntilCurrentWidgetIsRegistered(at: widgetURL) {
                     UserDefaults.standard.set(build, forKey: lastVerifiedBuildKey)
                 }
@@ -96,6 +97,33 @@ enum WidgetRepairService {
             Thread.sleep(forTimeInterval: 0.1)
         }
         return false
+    }
+
+    private static func newerInstalledWidget(than currentBuild: Int) -> URL? {
+        let applications = [
+            URL(fileURLWithPath: "/Applications", isDirectory: true),
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true)
+        ]
+        return applications
+            .flatMap { (try? FileManager.default.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil)) ?? [] }
+            .filter { $0.pathExtension == "app" }
+            .compactMap { appURL -> (Int, URL)? in
+                guard let info = NSDictionary(contentsOf: appURL.appendingPathComponent("Contents/Info.plist")),
+                      info["CFBundleIdentifier"] as? String == "dev.codexquota.app",
+                      let build = Int(info["CFBundleVersion"] as? String ?? ""),
+                      build > currentBuild
+                else { return nil }
+                let widgetURL = appURL.appendingPathComponent("Contents/PlugIns/CodexQuotaWidgetExtension.appex")
+                return FileManager.default.fileExists(atPath: widgetURL.path) ? (build, widgetURL) : nil
+            }
+            .max { $0.0 < $1.0 }?
+            .1
+    }
+
+    private static func register(_ widgetURL: URL) {
+        guard FileManager.default.fileExists(atPath: widgetURL.path) else { return }
+        run("/usr/bin/pluginkit", arguments: ["-a", widgetURL.path])
+        run("/usr/bin/pluginkit", arguments: ["-e", "use", "-i", extensionIdentifier])
     }
 
     private static func unregisterStaleWidgets(keeping widgetURL: URL, currentBuild: Int) -> CleanupDecision {
