@@ -110,7 +110,7 @@ enum WidgetRepairService {
             .compactMap { appURL -> (Int, URL)? in
                 guard let info = NSDictionary(contentsOf: appURL.appendingPathComponent("Contents/Info.plist")),
                       info["CFBundleIdentifier"] as? String == "dev.codexquota.app",
-                      let build = Int(info["CFBundleVersion"] as? String ?? ""),
+                      let build = buildNumber(info["CFBundleVersion"]),
                       build > currentBuild
                 else { return nil }
                 let widgetURL = appURL.appendingPathComponent("Contents/PlugIns/CodexQuotaWidgetExtension.appex")
@@ -178,8 +178,12 @@ enum WidgetRepairService {
               let value = try? PropertyListSerialization.propertyList(from: data, format: nil),
               let dictionary = value as? [String: Any]
         else { return nil }
-        if let build = dictionary["CFBundleVersion"] as? String { return Int(build) }
-        if let build = dictionary["CFBundleVersion"] as? NSNumber { return build.intValue }
+        return buildNumber(dictionary["CFBundleVersion"])
+    }
+
+    private static func buildNumber(_ value: Any?) -> Int? {
+        if let build = value as? String { return Int(build) }
+        if let build = value as? NSNumber { return build.intValue }
         return nil
     }
 
