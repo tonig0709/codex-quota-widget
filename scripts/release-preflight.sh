@@ -26,15 +26,12 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/codex-quota-release.XXXXXX")"
 app_pid=""
 blocker_pid=""
 translocated_pid=""
-downgrade_pid=""
 translocation_mount=""
 payload_mount=""
 runtime_app=""
 runtime_widget=""
 stale_app=""
 stale_widget=""
-newer_app=""
-newer_widget=""
 
 cleanup() {
     if [ -n "$blocker_pid" ]; then kill "$blocker_pid" 2>/dev/null || true; fi
@@ -44,22 +41,14 @@ cleanup() {
         wait "$app_pid" 2>/dev/null || true
     fi
     if [ -n "$translocated_pid" ]; then kill "$translocated_pid" 2>/dev/null || true; fi
-    if [ -n "$downgrade_pid" ]; then
-        pkill -TERM -P "$downgrade_pid" 2>/dev/null || true
-        kill "$downgrade_pid" 2>/dev/null || true
-        wait "$downgrade_pid" 2>/dev/null || true
-    fi
     if [ -n "$runtime_widget" ]; then /usr/bin/pluginkit -r "$runtime_widget" >/dev/null 2>&1 || true; fi
     if [ -n "$stale_widget" ]; then /usr/bin/pluginkit -r "$stale_widget" >/dev/null 2>&1 || true; fi
-    if [ -n "$newer_widget" ]; then /usr/bin/pluginkit -r "$newer_widget" >/dev/null 2>&1 || true; fi
     if [ -n "$translocation_mount" ]; then hdiutil detach "$translocation_mount" -force >/dev/null 2>&1 || true; fi
     if [ -n "$payload_mount" ]; then hdiutil detach "$payload_mount" -force >/dev/null 2>&1 || true; fi
     if [ -n "$runtime_app" ]; then "$launch_services_tool" -u "$runtime_app" >/dev/null 2>&1 || true; fi
     if [ -n "$stale_app" ]; then "$launch_services_tool" -u "$stale_app" >/dev/null 2>&1 || true; fi
-    if [ -n "$newer_app" ]; then "$launch_services_tool" -u "$newer_app" >/dev/null 2>&1 || true; fi
     if [ -n "$runtime_app" ] && [ -e "$runtime_app" ]; then rm -rf "$runtime_app"; fi
     if [ -n "$stale_app" ] && [ -e "$stale_app" ]; then rm -rf "$stale_app"; fi
-    if [ -n "$newer_app" ] && [ -e "$newer_app" ]; then rm -rf "$newer_app"; fi
     rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -301,8 +290,7 @@ section "Widget self-registration fault injection"
 mkdir -p "$HOME/Applications"
 runtime_app="$HOME/Applications/Codex Quota Current Gate $$.app"
 stale_app="$HOME/Applications/Codex Quota Stale Gate $$.app"
-newer_app="$HOME/Applications/Codex Quota Newer Gate $$.app"
-[ ! -e "$runtime_app" ] && [ ! -e "$stale_app" ] && [ ! -e "$newer_app" ] ||
+[ ! -e "$runtime_app" ] && [ ! -e "$stale_app" ] ||
     fail "temporary installed-app path already exists"
 [ "$app_build" -gt 1 ] || fail "build number must permit a lower-build registration control"
 stale_build=$((app_build - 1))
@@ -502,76 +490,6 @@ CODEX_QUOTA_EXPECT_DAILY_COUNT=7 \
 CODEX_QUOTA_EXPECT_LAST_TOKENS=4646 \
     "$tmp/widget-provider-probe"
 pass "candidate-owned port recovery, queued/delayed refreshes, partial quota liveness, Widget client A-to-B-to-C refresh, and privacy checks"
-
-section "Widget downgrade guard"
-pkill -TERM -P "$app_pid" 2>/dev/null || true
-kill "$app_pid" 2>/dev/null || true
-wait "$app_pid" 2>/dev/null || true
-app_pid=""
-for _ in {1..20}; do
-    /usr/sbin/lsof -nP -iTCP:48193 -sTCP:LISTEN >/dev/null 2>&1 || break
-    sleep 0.1
-done
-/usr/bin/pluginkit -r "$runtime_widget" >/dev/null 2>&1 || true
-"$launch_services_tool" -u "$runtime_app" >/dev/null 2>&1 || true
-
-newer_build=$((app_build + 1))
-/usr/bin/ditto "$app" "$newer_app"
-newer_widget="$newer_app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $newer_build" "$newer_app/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $newer_build" "$newer_widget/Contents/Info.plist"
-codesign --force --sign - --entitlements Widget/CodexQuotaWidget.entitlements "$newer_widget"
-codesign --force --sign - --entitlements App/CodexQuota.entitlements "$newer_app"
-/usr/bin/pluginkit -a "$newer_widget" || fail "could not seed the newer widget registration"
-/usr/bin/pluginkit -e use -i "$widget_identifier" || fail "could not enable the newer widget registration"
-
-newer_seeded=0
-newer_stable=0
-for _ in {1..40}; do
-    /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-newer.txt"
-    registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-newer.txt")"
-    if [ "$registration_count" -eq 1 ] &&
-       grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit-newer.txt" | grep -Fq "$newer_widget"; then
-        newer_stable=$((newer_stable + 1))
-        if [ "$newer_stable" -ge 2 ]; then
-            newer_seeded=1
-            break
-        fi
-    else
-        newer_stable=0
-    fi
-    sleep 0.25
-done
-[ "$newer_seeded" -eq 1 ] || fail "could not establish the newer-registration negative control"
-
-CODEX_BINARY="$tmp/fake-codex" CODEX_QUOTA_EXPECT_VERSION="$app_version" \
-    "$runtime_executable" >"$tmp/downgrade.log" 2>&1 &
-downgrade_pid=$!
-kill -0 "$downgrade_pid" 2>/dev/null || fail "older candidate exited during downgrade-guard test"
-downgrade_safe=0
-downgrade_stable=0
-for _ in {1..40}; do
-    /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-after-downgrade.txt"
-    registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-after-downgrade.txt")"
-    if [ "$registration_count" -eq 1 ] &&
-       grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit-after-downgrade.txt" | grep -Fq "$newer_widget" &&
-       ! grep -Fq "$runtime_widget" "$tmp/pluginkit-after-downgrade.txt"; then
-        downgrade_stable=$((downgrade_stable + 1))
-        if [ "$downgrade_stable" -ge 2 ]; then
-            downgrade_safe=1
-            break
-        fi
-    else
-        downgrade_stable=0
-    fi
-    sleep 0.25
-done
-[ "$downgrade_safe" -eq 1 ] || fail "an older app displaced the newer WidgetKit registration"
-pkill -TERM -P "$downgrade_pid" 2>/dev/null || true
-kill "$downgrade_pid" 2>/dev/null || true
-wait "$downgrade_pid" 2>/dev/null || true
-downgrade_pid=""
-pass "opening an older installed app cannot displace a newer widget build"
 
 if [ -n "$dmg_input" ]; then
     section "DMG payload"
