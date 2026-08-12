@@ -98,35 +98,26 @@ public enum WidgetGlassOpacity {
     }
 }
 
-public struct ParticleColorSettings: Equatable, Sendable {
-    public let hue: Double
-    public let saturation: Double
-    public let brightness: Double
+public enum SnapshotHTTPClient {
+    public static let endpoint = URL(string: "http://127.0.0.1:48193/snapshot")!
 
-    public init(hue: Double, saturation: Double, brightness: Double) {
-        self.hue = min(1, max(0, hue))
-        self.saturation = min(1, max(0, saturation))
-        self.brightness = min(1, max(0.2, brightness))
-    }
-
-    public static let defaultValue = ParticleColorSettings(
-        hue: 0.69,
-        saturation: 0.82,
-        brightness: 0.96
-    )
-}
-
-public enum ParticleMotion {
-    public static func unitPhase(_ value: Double) -> Double {
-        let remainder = value.truncatingRemainder(dividingBy: 1)
-        return remainder >= 0 ? remainder : remainder + 1
-    }
-
-    public static func hoverInfluence(
-        distance: Double,
-        nearestEdgeDistance: Double
-    ) -> Double {
-        max(0, min(1, 1 - max(0, distance - nearestEdgeDistance) / 70))
+    public static func load(from url: URL = endpoint, fallback: UsageSnapshot) async -> UsageSnapshot {
+        var safeFallback = fallback
+        safeFallback.email = nil
+        safeFallback.plan = nil
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 2
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let response = response as? HTTPURLResponse,
+              response.statusCode == 200,
+              response.mimeType == "application/json",
+              var snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data)
+        else { return safeFallback }
+        snapshot.email = nil
+        snapshot.plan = nil
+        return snapshot
     }
 }
 

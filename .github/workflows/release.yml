@@ -10,9 +10,15 @@ permissions:
 
 jobs:
   preflight:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Build app and widget
         run: |
           xcodebuild \
@@ -24,7 +30,17 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             clean build
+      - name: Apply ad-hoc signature
+        run: |
+          app="$PWD/preflight-build/Build/Products/Release/Codex Quota.app"
+          widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          codesign --force --sign - \
+            --entitlements Widget/CodexQuotaWidget.entitlements "$widget"
+          codesign --force --sign - \
+            --entitlements App/CodexQuota.entitlements "$app"
       - name: Release preflight checklist
+        env:
+          CODEX_QUOTA_ISOLATED_REGISTRY: "1"
         run: ./scripts/release-preflight.sh "$PWD/preflight-build/Build/Products/Release/Codex Quota.app"
 
   release:
@@ -42,6 +58,8 @@ jobs:
       APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Reject incomplete signing configuration
         if: env.ANY_SIGNING_SECRET == 'true' && env.SIGNED_RELEASE != 'true'
@@ -124,6 +142,14 @@ jobs:
           xcrun stapler validate "$dmg"
           spctl -a -vvv -t open "$dmg"
 
+      - name: Run release bug gate on final payload
+        env:
+          CODEX_QUOTA_ISOLATED_REGISTRY: "1"
+        run: |
+          ./scripts/release-preflight.sh \
+            "$PWD/build/Build/Products/Release/Codex Quota.app" \
+            "$PWD/Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
+
       - name: Record signing status
         run: |
           if [ "$SIGNED_RELEASE" = "true" ]; then
@@ -137,7 +163,7 @@ jobs:
           dmg="Codex-Quota-${GITHUB_REF_NAME}-macOS.dmg"
           shasum -a 256 "$dmg" > "Codex-Quota-${GITHUB_REF_NAME}-checksums.txt"
 
-      - name: Create GitHub Release
+      - name: Create draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -147,4 +173,5 @@ jobs:
             "$dmg" \
             "$checksums" \
             --title "Codex Quota ${GITHUB_REF_NAME}" \
+            --draft \
             --generate-notes

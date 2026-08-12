@@ -4,18 +4,40 @@ import Foundation
 import Network
 import WidgetKit
 
-private final class SnapshotServer {
+private final class SnapshotServer: @unchecked Sendable {
     static let port: NWEndpoint.Port = 48_193
 
     private let queue = DispatchQueue(label: "dev.codexquota.snapshot")
     private var listener: NWListener?
 
     func start() {
+        queue.async { [weak self] in
+            self?.startOnQueue()
+        }
+    }
+
+    private func startOnQueue() {
         guard listener == nil else { return }
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: Self.port)
-        guard let listener = try? NWListener(using: parameters) else { return }
-        listener.newConnectionHandler = { [queue] connection in
+        let newListener: NWListener
+        do {
+            newListener = try NWListener(using: parameters)
+        } catch {
+            retry()
+            return
+        }
+        newListener.stateUpdateHandler = { [weak self, weak newListener] state in
+            guard let self, let newListener, self.listener === newListener else { return }
+            switch state {
+            case .failed, .cancelled:
+                self.listener = nil
+                self.retry()
+            default:
+                break
+            }
+        }
+        newListener.newConnectionHandler = { [queue] connection in
             connection.start(queue: queue)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { data, _, _, _ in
                 let request = data.flatMap { String(data: $0, encoding: .utf8) }
@@ -30,8 +52,14 @@ private final class SnapshotServer {
                 connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
             }
         }
-        listener.start(queue: queue)
-        self.listener = listener
+        listener = newListener
+        newListener.start(queue: queue)
+    }
+
+    private func retry() {
+        queue.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.startOnQueue()
+        }
     }
 }
 
@@ -61,17 +89,18 @@ final class CodexAppServer: ObservableObject {
     private var refreshTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
     private var pendingRefresh: PendingRefresh?
+    private var refreshQueued = false
+    private var refreshTimeout: DispatchWorkItem?
     private var nextRequestID = 3
     private let snapshotServer = SnapshotServer()
 
     init() {
-        snapshotServer.start()
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor [weak self] in self?.refresh() }
         }
     }
 
@@ -82,6 +111,7 @@ final class CodexAppServer: ObservableObject {
     }
 
     func connect() {
+        snapshotServer.start()
         guard process == nil else { refresh() ; return }
         guard let executable = findCodex() else {
             state = .failed("未找到 Codex CLI。请先安装 Codex 或 ChatGPT for Mac。")
@@ -98,11 +128,16 @@ final class CodexAppServer: ObservableObject {
         process.standardOutput = stdout
         process.standardError = FileHandle.nullDevice
         process.terminationHandler = { [weak self] task in
-            Task { @MainActor in
+            let status = task.terminationStatus
+            Task { @MainActor [weak self] in
                 self?.process = nil
                 self?.input = nil
-                if task.terminationStatus != 0 {
-                    self?.state = .failed("Codex app-server 已退出（\(task.terminationStatus)）")
+                self?.refreshTimeout?.cancel()
+                self?.refreshTimeout = nil
+                self?.pendingRefresh = nil
+                self?.refreshQueued = false
+                if status != 0 {
+                    self?.state = .failed("Codex app-server 已退出（\(status)）")
                 }
             }
         }
@@ -110,7 +145,7 @@ final class CodexAppServer: ObservableObject {
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-            Task { @MainActor in self?.consume(data) }
+            Task { @MainActor [weak self] in self?.consume(data) }
         }
 
         do {
@@ -121,11 +156,12 @@ final class CodexAppServer: ObservableObject {
                 "clientInfo": [
                     "name": "codex_quota_widget",
                     "title": "Codex Quota Widget",
-                    "version": "0.5.0"
+                    "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
                 ]
             ])
+            refreshTimer?.invalidate()
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.refresh() }
+                Task { @MainActor [weak self] in self?.refresh() }
             }
         } catch {
             state = .failed(error.localizedDescription)
@@ -135,6 +171,10 @@ final class CodexAppServer: ObservableObject {
     func disconnect() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        refreshTimeout?.cancel()
+        refreshTimeout = nil
+        pendingRefresh = nil
+        refreshQueued = false
         input?.closeFile()
         process?.terminate()
         process = nil
@@ -144,6 +184,15 @@ final class CodexAppServer: ObservableObject {
 
     func refresh() {
         guard process != nil else { connect(); return }
+        guard pendingRefresh == nil else {
+            refreshQueued = true
+            return
+        }
+
+        beginRefresh()
+    }
+
+    private func beginRefresh() {
         let rateLimitRequestID = nextRequestID
         let usageRequestID = nextRequestID + 1
         nextRequestID += 2
@@ -154,19 +203,22 @@ final class CodexAppServer: ObservableObject {
         send(method: "account/rateLimits/read", id: rateLimitRequestID)
         send(method: "account/usage/read", id: usageRequestID)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.commitPendingRefreshIfReady(
+        let timeout = DispatchWorkItem { [weak self] in
+            self?.finishPendingRefresh(
                 rateLimitRequestID: rateLimitRequestID,
                 usageRequestID: usageRequestID,
                 allowPartial: true
             )
         }
+        refreshTimeout?.cancel()
+        refreshTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeout)
     }
 
     func setAppearance(_ appearance: WidgetAppearance) {
         guard snapshot.resolvedAppearance != appearance else { return }
         snapshot.appearance = appearance
-        persist()
+        persist(markDataRefresh: false)
     }
 
     private func consume(_ data: Data) {
@@ -234,7 +286,7 @@ final class CodexAppServer: ObservableObject {
             snapshot.email = account.email
             snapshot.plan = account.plan
             state = .connected(account.email)
-            persist()
+            persist(markDataRefresh: false)
             refresh()
         } else {
             state = .signingIn
@@ -246,41 +298,60 @@ final class CodexAppServer: ObservableObject {
         }
     }
 
-    private func persist() {
-        snapshot.updatedAt = .now
+    private func persist(markDataRefresh: Bool) {
+        if markDataRefresh { snapshot.updatedAt = .now }
         SnapshotStore.save(snapshot)
+        snapshotServer.start()
         WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)
         WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)
     }
 
-    private func commitPendingRefreshIfReady(
-        rateLimitRequestID: Int? = nil,
-        usageRequestID: Int? = nil,
-        allowPartial: Bool = false
+    private func commitPendingRefreshIfReady() {
+        guard let pending = pendingRefresh,
+              pending.rateLimits != nil,
+              pending.dailyUsage != nil
+        else { return }
+        finishPendingRefresh(
+            rateLimitRequestID: pending.rateLimitRequestID,
+            usageRequestID: pending.usageRequestID,
+            allowPartial: false
+        )
+    }
+
+    private func finishPendingRefresh(
+        rateLimitRequestID: Int,
+        usageRequestID: Int,
+        allowPartial: Bool
     ) {
         guard let pending = pendingRefresh,
-              (rateLimitRequestID == nil || pending.rateLimitRequestID == rateLimitRequestID),
-              (usageRequestID == nil || pending.usageRequestID == usageRequestID),
+              pending.rateLimitRequestID == rateLimitRequestID,
+              pending.usageRequestID == usageRequestID,
               allowPartial || (pending.rateLimits != nil && pending.dailyUsage != nil)
         else { return }
-        pendingRefresh = nil
 
-        var changed = false
+        pendingRefresh = nil
+        refreshTimeout?.cancel()
+        refreshTimeout = nil
+
         if let rateLimits = pending.rateLimits {
             if rateLimits.fiveHour != snapshot.fiveHour {
                 snapshot.fiveHour = rateLimits.fiveHour
-                changed = true
             }
             if rateLimits.weekly != snapshot.weekly {
                 snapshot.weekly = rateLimits.weekly
-                changed = true
             }
         }
         if let dailyUsage = pending.dailyUsage, dailyUsage != snapshot.dailyUsage {
             snapshot.dailyUsage = dailyUsage
-            changed = true
         }
-        if changed { persist() }
+        if pending.rateLimits != nil || pending.dailyUsage != nil {
+            persist(markDataRefresh: true)
+        }
+
+        if refreshQueued {
+            refreshQueued = false
+            beginRefresh()
+        }
     }
 
     private func send(method: String, id: Int? = nil, params: [String: Any]? = nil) {

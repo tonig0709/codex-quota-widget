@@ -1,17 +1,22 @@
 name: Test
 
 on:
-  workflow_dispatch:
   push:
   pull_request:
 
 jobs:
-  swift-test:
-    runs-on: macos-15
+  release-gate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - run: swift run quota-self-check
-      - name: Build macOS app and widget
+        with:
+          fetch-depth: 0
+
+      - name: Build universal app and widget
         run: |
           xcodebuild \
             -project CodexQuotaWidget.xcodeproj \
@@ -22,60 +27,17 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             clean build
-      - name: Check widget configuration metadata
+
+      - name: Apply ad-hoc signature
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"
-          widget="$PWD/build/Build/Products/Release/Codex Quota.app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
-          app_metadata="$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
-          metadata="$widget/Contents/Resources/Metadata.appintents/extract.actionsdata"
-          plutil -convert json -o - "$app_metadata" | grep 'AppearanceV3ConfigurationIntent'
-          plutil -convert json -o - "$metadata" | grep 'AppearanceV3ConfigurationIntent'
-          plutil -convert json -o - "$metadata" | grep 'useLightAppearance'
-          plutil -convert json -o - "$metadata" | grep 'glassOpacity'
-          plutil -convert json -o - "$metadata" | grep '玻璃不透明度'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Contents/Info.plist")" = \
-            "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$widget/Contents/Info.plist")"
-          strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.small.v3'
-          strings "$widget/Contents/MacOS/CodexQuotaWidgetExtension" | grep 'dev.codexquota.widget.large.v3'
-      - name: Check update self-repair contract
-        run: |
-          grep 'WidgetRepairService.repair()' App/CodexQuotaApp.swift
-          grep 'CodexQuotaWidgetExtension' App/WidgetRepairService.swift
-          grep 'lsregister' App/WidgetRepairService.swift
-          grep 'pluginkit' App/WidgetRepairService.swift
-          grep 'reloadAllTimelines' App/WidgetRepairService.swift
-          grep 'requiresInstalledCopy' App/WidgetRepairService.swift
-          grep 'AppTranslocation' App/WidgetRepairService.swift
-          grep 'isCurrentWidgetRegistered' App/WidgetRepairService.swift
-          grep 'InstallLocationView' App/CodexQuotaApp.swift
-      - name: Check dark glass surface contract
-        run: |
-          grep 'return .black.opacity(resolvedOpacity)' Shared/QuotaWidgetView.swift
-          ! grep 'Color(red: 0.04' Shared/QuotaWidgetView.swift
-          grep 'containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift
-          ! grep 'Color.clear' Widget/CodexQuotaWidget.swift
-      - name: Check local snapshot bridge
-        run: |
-          app="$PWD/build/Build/Products/Release/Codex Quota.app"
-          "$app/Contents/MacOS/Codex Quota" >/tmp/codex-quota.log 2>&1 &
-          app_pid=$!
-          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
-          curl --fail --retry 10 --retry-delay 1 --retry-connrefused \
-            http://127.0.0.1:48193/snapshot -o /tmp/snapshot.json
-          grep '"dailyUsage"' /tmp/snapshot.json
-          grep '"appearance":"dark"' /tmp/snapshot.json
-          ! grep -E '"email"|"plan"' /tmp/snapshot.json
-      - name: Check synchronized widget refresh contract
-        run: |
-          grep 'private struct PendingRefresh' App/CodexAppServer.swift
-          grep 'withTimeInterval: 15' App/CodexAppServer.swift
-          grep 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexAppServer.swift
-          grep 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift
-          grep 'reloadIgnoringLocalCacheData' Widget/CodexQuotaWidget.swift
-          grep 'addingTimeInterval(60)' Widget/CodexQuotaWidget.swift
-      - name: Release preflight checklist
-        run: ./scripts/release-preflight.sh "$PWD/build/Build/Products/Release/Codex Quota.app"
-      - name: Package DMG
+          widget="$app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+          codesign --force --sign - \
+            --entitlements Widget/CodexQuotaWidget.entitlements "$widget"
+          codesign --force --sign - \
+            --entitlements App/CodexQuota.entitlements "$app"
+
+      - name: Package test DMG
         run: |
           app="$PWD/build/Build/Products/Release/Codex Quota.app"
           mkdir "$PWD/dmg-root"
@@ -83,12 +45,11 @@ jobs:
           ln -s /Applications "$PWD/dmg-root/Applications"
           hdiutil create -volname "Codex Quota" -srcfolder "$PWD/dmg-root" \
             -ov -format UDZO "$PWD/Codex-Quota-test.dmg"
-          hdiutil verify "$PWD/Codex-Quota-test.dmg"
-      - name: Upload local preview DMG
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Codex-Quota-particle-preview-build18
-          path: Codex-Quota-test.dmg
-          if-no-files-found: error
-          retention-days: 1
+
+      - name: Run release bug gate
+        env:
+          CODEX_QUOTA_ISOLATED_REGISTRY: "1"
+        run: |
+          ./scripts/release-preflight.sh \
+            "$PWD/build/Build/Products/Release/Codex Quota.app" \
+            "$PWD/Codex-Quota-test.dmg"

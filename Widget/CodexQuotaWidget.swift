@@ -6,21 +6,11 @@ struct CodexQuotaEntry: TimelineEntry {
     let date: Date
     let snapshot: UsageSnapshot
     let glassOpacity: Double
-    let visualTheme: WidgetVisualTheme
-    let particleColor: ParticleColorSettings
 }
 
 struct CodexQuotaProvider: AppIntentTimelineProvider {
-    private let snapshotURL = URL(string: "http://127.0.0.1:48193/snapshot")!
-
     func placeholder(in context: Context) -> CodexQuotaEntry {
-        CodexQuotaEntry(
-            date: .now,
-            snapshot: .placeholder,
-            glassOpacity: WidgetGlassOpacity.defaultValue,
-            visualTheme: .classic,
-            particleColor: .defaultValue
-        )
+        CodexQuotaEntry(date: .now, snapshot: .placeholder, glassOpacity: WidgetGlassOpacity.defaultValue)
     }
 
     func snapshot(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
@@ -40,87 +30,33 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     private func previewEntry(for configuration: AppearanceV3ConfigurationIntent) -> CodexQuotaEntry {
         var snapshot = UsageSnapshot.placeholder
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return configuredEntry(snapshot: snapshot, configuration: configuration)
+        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
     private func entry(for configuration: AppearanceV3ConfigurationIntent) async -> CodexQuotaEntry {
         var snapshot = await loadSnapshot()
         snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return configuredEntry(snapshot: snapshot, configuration: configuration)
+        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
-    private func configuredEntry(
-        snapshot: UsageSnapshot,
-        configuration: AppearanceV3ConfigurationIntent
-    ) -> CodexQuotaEntry {
-        CodexQuotaEntry(
-            date: .now,
-            snapshot: snapshot,
-            glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity),
-            visualTheme: configuration.visualTheme,
-            particleColor: ParticleColorSettings(
-                hue: configuration.particleHue,
-                saturation: configuration.particleSaturation,
-                brightness: configuration.particleBrightness
-            )
-        )
-    }
-
-    private func loadSnapshot() async -> UsageSnapshot {
-        var request = URLRequest(url: snapshotURL)
-        request.timeoutInterval = 2
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              let response = response as? HTTPURLResponse,
-              response.statusCode == 200,
-              response.mimeType == "application/json",
-              let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data) else {
-            return SnapshotStore.load()
-        }
+    func loadSnapshot() async -> UsageSnapshot {
+        let snapshot = await SnapshotHTTPClient.load(fallback: SnapshotStore.load())
         SnapshotStore.save(snapshot)
         return snapshot
-    }
-}
-
-private struct ConfiguredQuotaWidgetView: View {
-    let entry: CodexQuotaEntry
-    let isSmall: Bool
-
-    var body: some View {
-        Group {
-            if isSmall {
-                QuotaRingWidgetView(
-                    snapshot: entry.snapshot,
-                    glassOpacity: entry.glassOpacity,
-                    usesParticles: entry.visualTheme == .particle,
-                    particleColor: entry.particleColor
-                )
-            } else {
-                QuotaWidgetView(
-                    snapshot: entry.snapshot,
-                    glassOpacity: entry.glassOpacity,
-                    usesParticles: entry.visualTheme == .particle,
-                    particleColor: entry.particleColor
-                )
-            }
-        }
-        .containerBackground(for: .widget) {
-            WidgetSurface(
-                isLight: entry.snapshot.resolvedAppearance == .light,
-                opacity: entry.glassOpacity,
-                accent: isSmall ? .green : .blue,
-                usesParticles: entry.visualTheme == .particle,
-                particleColor: entry.particleColor
-            )
-        }
     }
 }
 
 struct SmallCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.smallWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            ConfiguredQuotaWidgetView(entry: entry, isSmall: true)
+            QuotaRingWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
+                .containerBackground(for: .widget) {
+                    LiquidGlassSurface(
+                        isLight: entry.snapshot.resolvedAppearance == .light,
+                        opacity: entry.glassOpacity,
+                        accent: .green
+                    )
+                }
         }
         .configurationDisplayName("Codex Quota · 小型")
         .description("以双圆环显示 Codex 5h 与周额度剩余比例。")
@@ -132,7 +68,14 @@ struct SmallCodexQuotaWidget: Widget {
 struct LargeCodexQuotaWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: SnapshotStore.largeWidgetKind, intent: AppearanceV3ConfigurationIntent.self, provider: CodexQuotaProvider()) { entry in
-            ConfiguredQuotaWidgetView(entry: entry, isSmall: false)
+            QuotaWidgetView(snapshot: entry.snapshot, glassOpacity: entry.glassOpacity)
+                .containerBackground(for: .widget) {
+                    LiquidGlassSurface(
+                        isLight: entry.snapshot.resolvedAppearance == .light,
+                        opacity: entry.glassOpacity,
+                        accent: .blue
+                    )
+                }
         }
         .configurationDisplayName("Codex Quota · 大型")
         .description("查看 Codex 5h、周额度与近七天 Token 用量。")
@@ -141,6 +84,7 @@ struct LargeCodexQuotaWidget: Widget {
     }
 }
 
+#if !CODEX_QUOTA_PROVIDER_PROBE
 @main
 @MainActor
 struct CodexQuotaWidgetBundle: WidgetBundle {
@@ -149,3 +93,4 @@ struct CodexQuotaWidgetBundle: WidgetBundle {
         LargeCodexQuotaWidget()
     }
 }
+#endif

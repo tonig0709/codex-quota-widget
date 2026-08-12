@@ -4,19 +4,10 @@ import SwiftUI
 public struct QuotaWidgetView: View {
     public let snapshot: UsageSnapshot
     public let glassOpacity: Double
-    public let usesParticles: Bool
-    public let particleColor: ParticleColorSettings
 
-    public init(
-        snapshot: UsageSnapshot,
-        glassOpacity: Double = WidgetGlassOpacity.defaultValue,
-        usesParticles: Bool = false,
-        particleColor: ParticleColorSettings = .defaultValue
-    ) {
+    public init(snapshot: UsageSnapshot, glassOpacity: Double = WidgetGlassOpacity.defaultValue) {
         self.snapshot = snapshot
         self.glassOpacity = WidgetGlassOpacity.clamped(glassOpacity)
-        self.usesParticles = usesParticles
-        self.particleColor = particleColor
     }
 
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
@@ -113,15 +104,6 @@ public struct QuotaWidgetView: View {
                         .fill(quotaColor(for: remaining).gradient)
                         .frame(width: proxy.size.width * CGFloat(remaining) / 100)
                 }
-                .overlay {
-                    if usesParticles {
-                        ParticleTipEmitter(
-                            shape: .linear(Double(remaining) / 100),
-                            color: particleColor
-                        )
-                        .frame(width: proxy.size.width, height: 24)
-                    }
-                }
             }
             .frame(height: 9)
 
@@ -152,19 +134,10 @@ public struct QuotaWidgetView: View {
 public struct QuotaRingWidgetView: View {
     public let snapshot: UsageSnapshot
     public let glassOpacity: Double
-    public let usesParticles: Bool
-    public let particleColor: ParticleColorSettings
 
-    public init(
-        snapshot: UsageSnapshot,
-        glassOpacity: Double = WidgetGlassOpacity.defaultValue,
-        usesParticles: Bool = false,
-        particleColor: ParticleColorSettings = .defaultValue
-    ) {
+    public init(snapshot: UsageSnapshot, glassOpacity: Double = WidgetGlassOpacity.defaultValue) {
         self.snapshot = snapshot
         self.glassOpacity = WidgetGlassOpacity.clamped(glassOpacity)
-        self.usesParticles = usesParticles
-        self.particleColor = particleColor
     }
 
     private var isLight: Bool { snapshot.resolvedAppearance == .light }
@@ -196,12 +169,6 @@ public struct QuotaRingWidgetView: View {
                     .scaledToFit()
                     .frame(width: 22, height: 22)
                     .accessibilityHidden(true)
-                if usesParticles {
-                    ParticleTipEmitter(
-                        shape: .ring(Double(remaining) / 100),
-                        color: particleColor
-                    )
-                }
             }
             .frame(width: 58, height: 58)
 
@@ -271,244 +238,5 @@ public struct LiquidGlassSurface: View {
 
     private var innerBorder: Color {
         isLight ? accent.opacity(0.16) : .white.opacity(0.08)
-    }
-}
-
-struct WidgetSurface: View {
-    let isLight: Bool
-    let opacity: Double
-    let accent: Color
-    let usesParticles: Bool
-    let particleColor: ParticleColorSettings
-
-    init(
-        isLight: Bool,
-        opacity: Double,
-        accent: Color,
-        usesParticles: Bool = false,
-        particleColor: ParticleColorSettings = .defaultValue
-    ) {
-        self.isLight = isLight
-        self.opacity = opacity
-        self.accent = accent
-        self.usesParticles = usesParticles
-        self.particleColor = particleColor
-    }
-
-    public var body: some View {
-        ZStack {
-            LiquidGlassSurface(isLight: isLight, opacity: opacity, accent: accent)
-            if usesParticles {
-                ParticleGlassBorder(
-                    isLight: isLight,
-                    color: particleColor
-                )
-            }
-        }
-    }
-}
-
-private struct ParticleGlassBorder: View {
-    let isLight: Bool
-    let color: ParticleColorSettings
-
-    var body: some View {
-        Canvas(opaque: false) { context, size in
-            drawParticles(
-                in: &context,
-                size: size,
-                time: Date.now.timeIntervalSinceReferenceDate
-            )
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private func drawParticles(in context: inout GraphicsContext, size: CGSize, time: Double) {
-        let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        let phase = time * (2 * .pi / 5.6)
-        let particleCount = size.width < 220 ? 84 : 132
-        let lanes = 4
-
-        for lane in 0..<lanes {
-            for index in 0..<particleCount {
-                let progress = Double(index) / Double(particleCount)
-                let angle = progress * 2 * .pi
-                let inset = 3.6 + Double(lane) * 1.45
-                let xUnit = signedPower(cos(angle), exponent: 0.36)
-                let yUnit = signedPower(sin(angle), exponent: 0.36)
-                let x = Double(center.x) + (Double(size.width) / 2 - inset) * xUnit
-                let y = Double(center.y) + (Double(size.height) / 2 - inset) * yUnit
-
-                let movingHighlight = max(0, cos(angle - phase))
-                let highlight = pow(movingHighlight, 8)
-                let diameter = 0.8 + Double((index + lane) % 4) * 0.18 + highlight * 0.9
-                let opacity = min(1, (isLight ? 0.32 : 0.46)
-                    + Double(lanes - lane) * 0.055
-                    + highlight * 0.26)
-
-                drawDot(in: &context, x: x, y: y, diameter: diameter, opacity: opacity)
-            }
-        }
-
-        drawDetachedParticles(in: &context, size: size, phase: phase)
-
-        let edge = RoundedRectangle(cornerRadius: 30, style: .continuous)
-            .path(in: CGRect(origin: .zero, size: size).insetBy(dx: 2.2, dy: 2.2))
-        context.stroke(
-            edge,
-            with: .color(color.swiftUIColor.opacity(isLight ? 0.14 : 0.2)),
-            lineWidth: 1
-        )
-    }
-
-    private func drawDetachedParticles(
-        in context: inout GraphicsContext,
-        size: CGSize,
-        phase: Double
-    ) {
-        let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        let count = size.width < 220 ? 72 : 108
-
-        for index in 0..<count {
-            let progress = Double(index) / Double(count)
-            let angle = progress * 2 * .pi
-            let xUnit = signedPower(cos(angle), exponent: 0.36)
-            let yUnit = signedPower(sin(angle), exponent: 0.36)
-            let x = Double(center.x) + (Double(size.width) / 2 - 2.8) * xUnit
-            let y = Double(center.y) + (Double(size.height) / 2 - 2.8) * yUnit
-            guard index.isMultiple(of: 9) else { continue }
-
-            let normal = normalized(
-                dx: x - Double(center.x),
-                dy: y - Double(center.y)
-            )
-            let life = ParticleMotion.unitPhase(phase / (2 * .pi) + progress * 1.7)
-            let drift = 3.5 + life * 8
-            let turbulence = sin(Double(index) * 2.17 + phase) * 0.7
-            let detachedX = x + normal.dx * drift - normal.dy * turbulence
-            let detachedY = y + normal.dy * drift + normal.dx * turbulence
-            let opacity = (1 - life) * (isLight ? 0.38 : 0.58) * 0.72
-
-            drawDot(
-                in: &context,
-                x: detachedX,
-                y: detachedY,
-                diameter: 0.75,
-                opacity: opacity
-            )
-        }
-    }
-
-    private func drawDot(
-        in context: inout GraphicsContext,
-        x: Double,
-        y: Double,
-        diameter: Double,
-        opacity: Double
-    ) {
-        let rect = CGRect(
-            x: x - diameter / 2,
-            y: y - diameter / 2,
-            width: diameter,
-            height: diameter
-        )
-        context.fill(
-            Path(ellipseIn: rect),
-            with: .color(color.swiftUIColor.opacity(max(0, min(1, opacity))))
-        )
-    }
-
-    private func normalized(dx: Double, dy: Double) -> (dx: Double, dy: Double) {
-        let length = max(0.001, hypot(dx, dy))
-        return (dx / length, dy / length)
-    }
-
-    private func signedPower(_ value: Double, exponent: Double) -> Double {
-        copysign(pow(abs(value), exponent), value)
-    }
-}
-
-private enum ParticleTipShape {
-    case linear(Double)
-    case ring(Double)
-}
-
-private struct ParticleTipEmitter: View {
-    let shape: ParticleTipShape
-    let color: ParticleColorSettings
-
-    var body: some View {
-        Canvas(opaque: false) { context, size in
-            drawParticles(
-                in: &context,
-                size: size,
-                time: Date.now.timeIntervalSinceReferenceDate
-            )
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private func drawParticles(in context: inout GraphicsContext, size: CGSize, time: Double) {
-        let originAndDirection = originAndDirection(in: size)
-
-        for index in 0..<12 {
-            let life = ParticleMotion.unitPhase(time * 0.22 + Double(index) / 12)
-            let drift = life * 10
-            let turbulence = sin(Double(index) * 2.41 + time) * 2 * life
-            let x = originAndDirection.origin.x
-                + originAndDirection.direction.dx * drift
-                - originAndDirection.direction.dy * turbulence
-            let y = originAndDirection.origin.y
-                + originAndDirection.direction.dy * drift
-                + originAndDirection.direction.dx * turbulence
-            let diameter = 0.8 + (1 - life) * 1.15
-            let rect = CGRect(
-                x: x - diameter / 2,
-                y: y - diameter / 2,
-                width: diameter,
-                height: diameter
-            )
-            context.fill(
-                Path(ellipseIn: rect),
-                with: .color(color.swiftUIColor.opacity(pow(1 - life, 1.7) * 0.72))
-            )
-        }
-    }
-
-    private func originAndDirection(
-        in size: CGSize
-    ) -> (origin: CGPoint, direction: CGVector) {
-        switch shape {
-        case .linear(let progress):
-            return (
-                CGPoint(
-                    x: size.width * max(0, min(1, progress)),
-                    y: size.height / 2
-                ),
-                CGVector(dx: 1, dy: 0)
-            )
-        case .ring(let progress):
-            let angle: CGFloat = -.pi / 2 + 2 * .pi * max(0, min(1, progress))
-            let radius = min(size.width, size.height) / 2 - 8
-            return (
-                CGPoint(
-                    x: size.width / 2 + cos(angle) * radius,
-                    y: size.height / 2 + sin(angle) * radius
-                ),
-                CGVector(
-                    dx: cos(angle) * 0.82 - sin(angle) * 0.18,
-                    dy: sin(angle) * 0.82 + cos(angle) * 0.18
-                )
-            )
-        }
-    }
-
-}
-
-private extension ParticleColorSettings {
-    var swiftUIColor: Color {
-        Color(hue: hue, saturation: saturation, brightness: brightness)
     }
 }
