@@ -75,6 +75,24 @@ fail() {
 require_text() {
     grep -Fq -- "$1" "$2" || fail "$3"
 }
+registration_count() {
+    /usr/bin/pluginkit -m -A -v -i "$widget_identifier" |
+        awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }'
+}
+wait_for_empty_registry() {
+    local stable=0 count
+    for _ in {1..40}; do
+        count="$(registration_count)"
+        if [ "$count" -eq 0 ]; then
+            stable=$((stable + 1))
+            [ "$stable" -ge 2 ] && return 0
+        else
+            stable=0
+        fi
+        sleep 0.25
+    done
+    return 1
+}
 plist_value() {
     /usr/libexec/PlistBuddy -c "Print :$2" "$1"
 }
@@ -273,9 +291,10 @@ pass "DMG/build copies do not run registration repair or occupy the live snapsho
 section "Widget self-registration fault injection"
 [ "${CODEX_QUOTA_ISOLATED_REGISTRY:-}" = "1" ] ||
     fail "widget self-registration probe requires CODEX_QUOTA_ISOLATED_REGISTRY=1 on a clean CI user"
-/usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-baseline.txt"
-baseline_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-baseline.txt")"
-[ "$baseline_count" -eq 0 ] || fail "isolated widget registry is not empty ($baseline_count registrations); no changes were made"
+wait_for_empty_registry || {
+    baseline_count="$(registration_count)"
+    fail "isolated widget registry is not empty ($baseline_count registrations); no changes were made"
+}
 
 mkdir -p "$HOME/Applications"
 runtime_app="$HOME/Applications/Codex Quota Current Gate $$.app"
@@ -505,13 +524,19 @@ codesign --force --sign - --entitlements App/CodexQuota.entitlements "$newer_app
 /usr/bin/pluginkit -e use -i "$widget_identifier" || fail "could not enable the newer widget registration"
 
 newer_seeded=0
-for _ in {1..20}; do
+newer_stable=0
+for _ in {1..40}; do
     /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-newer.txt"
     registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-newer.txt")"
     if [ "$registration_count" -eq 1 ] &&
        grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit-newer.txt" | grep -Fq "$newer_widget"; then
-        newer_seeded=1
-        break
+        newer_stable=$((newer_stable + 1))
+        if [ "$newer_stable" -ge 2 ]; then
+            newer_seeded=1
+            break
+        fi
+    else
+        newer_stable=0
     fi
     sleep 0.25
 done
@@ -520,14 +545,26 @@ done
 CODEX_BINARY="$tmp/fake-codex" CODEX_QUOTA_EXPECT_VERSION="$app_version" \
     "$runtime_executable" >"$tmp/downgrade.log" 2>&1 &
 downgrade_pid=$!
-sleep 3
 kill -0 "$downgrade_pid" 2>/dev/null || fail "older candidate exited during downgrade-guard test"
-/usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-after-downgrade.txt"
-registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-after-downgrade.txt")"
-[ "$registration_count" -eq 1 ] &&
-    grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit-after-downgrade.txt" | grep -Fq "$newer_widget" &&
-    ! grep -Fq "$runtime_widget" "$tmp/pluginkit-after-downgrade.txt" ||
-    fail "an older app displaced the newer WidgetKit registration"
+downgrade_safe=0
+downgrade_stable=0
+for _ in {1..40}; do
+    /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-after-downgrade.txt"
+    registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-after-downgrade.txt")"
+    if [ "$registration_count" -eq 1 ] &&
+       grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit-after-downgrade.txt" | grep -Fq "$newer_widget" &&
+       ! grep -Fq "$runtime_widget" "$tmp/pluginkit-after-downgrade.txt"; then
+        downgrade_stable=$((downgrade_stable + 1))
+        if [ "$downgrade_stable" -ge 2 ]; then
+            downgrade_safe=1
+            break
+        fi
+    else
+        downgrade_stable=0
+    fi
+    sleep 0.25
+done
+[ "$downgrade_safe" -eq 1 ] || fail "an older app displaced the newer WidgetKit registration"
 pkill -TERM -P "$downgrade_pid" 2>/dev/null || true
 kill "$downgrade_pid" 2>/dev/null || true
 wait "$downgrade_pid" 2>/dev/null || true
