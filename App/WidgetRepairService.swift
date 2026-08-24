@@ -45,7 +45,7 @@ enum WidgetRepairService {
             let buildChanged = UserDefaults.standard.string(forKey: lastVerifiedBuildKey) != build
 
             if registrationMissing || buildChanged {
-                switch unregisterStaleWidgets(keeping: widgetURL, currentBuild: currentBuild) {
+                switch registrationDecision(keeping: widgetURL, currentBuild: currentBuild) {
                 case .unavailable:
                     return
                 case .newerBuildPresent:
@@ -98,7 +98,7 @@ enum WidgetRepairService {
         return false
     }
 
-    private static func unregisterStaleWidgets(keeping widgetURL: URL, currentBuild: Int) -> CleanupDecision {
+    private static func registrationDecision(keeping widgetURL: URL, currentBuild: Int) -> CleanupDecision {
         let currentURL = canonical(widgetURL)
         guard let registrations = registrations() else { return .unavailable }
         let stale = registrations.filter { $0.url != currentURL }
@@ -108,9 +108,6 @@ enum WidgetRepairService {
             } else if FileManager.default.fileExists(atPath: registration.url.path) {
                 return .unavailable
             }
-        }
-        for registration in stale {
-            run("/usr/bin/pluginkit", arguments: ["-r", registration.url.path])
         }
         return .proceed
     }
