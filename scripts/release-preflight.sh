@@ -59,10 +59,14 @@ pass() { printf '    PASS  %s\n' "$1"; }
 fail() {
     printf '    FAIL  %s\n' "$1" >&2
     if [ -s "$tmp/app.log" ]; then tail -80 "$tmp/app.log" >&2; fi
+    if [ -s "$tmp/pluginkit.txt" ]; then cat "$tmp/pluginkit.txt" >&2; fi
     exit 1
 }
 require_text() {
     grep -Fq -- "$1" "$2" || fail "$3"
+}
+forbid_text() {
+    ! grep -Fq -- "$1" "$2" || fail "$3"
 }
 registration_count() {
     /usr/bin/pluginkit -m -A -v -i "$widget_identifier" |
@@ -182,8 +186,9 @@ require_text 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexA
 require_text 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift "large widget reload is missing"
 require_text 'WidgetRepairService.repair()' App/CodexQuotaApp.swift "launch-time widget repair is missing"
 require_text 'isCurrentWidgetRegistered' App/WidgetRepairService.swift "installed widget registration check is missing"
-require_text 'unregisterStaleWidgets' App/WidgetRepairService.swift "stale widget registration cleanup is missing"
+require_text 'registrationDecision' App/WidgetRepairService.swift "widget version election guard is missing"
 require_text '["-e", "use", "-i", extensionIdentifier]' App/WidgetRepairService.swift "widget enable repair is missing"
+forbid_text '["-r"' App/WidgetRepairService.swift "app must not unregister a shared widget identifier"
 pass "quota parsing, boundary renders, background-difference detection, and refresh contracts"
 
 section "Built app and WidgetKit extension"
@@ -260,10 +265,12 @@ pass "signed, version-matched app and extension with both widget configurations"
 section "Isolated WidgetKit registry"
 [ "${CODEX_QUOTA_ISOLATED_REGISTRY:-}" = "1" ] ||
     fail "widget self-registration probe requires CODEX_QUOTA_ISOLATED_REGISTRY=1 on a clean CI user"
-wait_for_empty_registry || {
-    baseline_count="$(registration_count)"
-    fail "isolated widget registry is not empty ($baseline_count registrations); no changes were made"
-}
+/usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-baseline.txt"
+baseline_count="$(registration_count)"
+if [ "$baseline_count" -eq 1 ] && grep -Fq "$widget" "$tmp/pluginkit-baseline.txt"; then
+    /usr/bin/pluginkit -r "$widget" >/dev/null 2>&1 || true
+fi
+wait_for_empty_registry || fail "isolated widget registry contains a registration unrelated to the checked build"
 pass "isolated WidgetKit registry starts empty"
 
 section "Non-installed copies stay inert"
