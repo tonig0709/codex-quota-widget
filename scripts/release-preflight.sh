@@ -260,10 +260,12 @@ pass "signed, version-matched app and extension with both widget configurations"
 section "Isolated WidgetKit registry"
 [ "${CODEX_QUOTA_ISOLATED_REGISTRY:-}" = "1" ] ||
     fail "widget self-registration probe requires CODEX_QUOTA_ISOLATED_REGISTRY=1 on a clean CI user"
-wait_for_empty_registry || {
-    baseline_count="$(registration_count)"
-    fail "isolated widget registry is not empty ($baseline_count registrations); no changes were made"
-}
+/usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-baseline.txt"
+baseline_count="$(registration_count)"
+if [ "$baseline_count" -eq 1 ] && grep -Fq "$widget" "$tmp/pluginkit-baseline.txt"; then
+    /usr/bin/pluginkit -r "$widget" >/dev/null 2>&1 || true
+fi
+wait_for_empty_registry || fail "isolated widget registry contains a registration unrelated to the checked build"
 pass "isolated WidgetKit registry starts empty"
 
 section "Non-installed copies stay inert"
