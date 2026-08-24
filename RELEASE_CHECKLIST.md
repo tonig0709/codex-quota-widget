@@ -18,9 +18,8 @@ The gate blocks release unless all of these pass:
 - **Widget discovery:** the gate seeds an enabled lower-build registration,
   launches the installed candidate without registering it from the script, and
   requires the App to remove the stale path and leave exactly one enabled
-  current extension. A second negative control proves that opening an older App
-  cannot displace a higher-build extension. AppIntent metadata, both sizes,
-  assets, ATS, and signed network entitlements are checked on the built extension.
+  current extension. AppIntent metadata, both sizes, assets, ATS, and signed
+  network entitlements are checked on the built extension.
 - **No black or blank widget:** SwiftUI renders small/large × light/dark into
   all eight family × appearance × opacity-boundary bitmaps. Each result is
   compared with the same empty glass background, including separate quota and
