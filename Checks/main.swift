@@ -197,6 +197,32 @@ await MainActor.run {
     let fullFrame = CGRect(x: 0, y: 0, width: 1, height: 1)
     precondition(!hasReadableContrast(solidSmall, in: fullFrame), "solid-black small-widget negative control passed")
     precondition(!hasReadableContrast(solidLarge, in: fullFrame), "solid-black large-widget negative control passed")
+
+    let warmWallpaper = LinearGradient(colors: [.orange, .brown], startPoint: .top, endPoint: .bottom)
+    let coolWallpaper = LinearGradient(colors: [.cyan, .indigo], startPoint: .top, endPoint: .bottom)
+    let minimumWarm = render(
+        ZStack { warmWallpaper; LiquidGlassSurface(isLight: false, opacity: WidgetGlassOpacity.minimum, accent: .blue) },
+        width: 704,
+        height: 344
+    )
+    let minimumCool = render(
+        ZStack { coolWallpaper; LiquidGlassSurface(isLight: false, opacity: WidgetGlassOpacity.minimum, accent: .blue) },
+        width: 704,
+        height: 344
+    )
+    let maximumWarm = render(
+        ZStack { warmWallpaper; LiquidGlassSurface(isLight: false, opacity: WidgetGlassOpacity.maximum, accent: .blue) },
+        width: 704,
+        height: 344
+    )
+    let maximumCool = render(
+        ZStack { coolWallpaper; LiquidGlassSurface(isLight: false, opacity: WidgetGlassOpacity.maximum, accent: .blue) },
+        width: 704,
+        height: 344
+    )
+    let minimumInfluence = changedPixels(minimumWarm, minimumCool, in: fullFrame)
+    let maximumInfluence = changedPixels(maximumWarm, maximumCool, in: fullFrame)
+    precondition(minimumInfluence > maximumInfluence * 10, "minimum dark glass does not reveal the wallpaper")
 }
 #endif
 

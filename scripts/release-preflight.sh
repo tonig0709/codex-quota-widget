@@ -172,6 +172,7 @@ require_text 'LargeCodexQuotaWidget()' Widget/CodexQuotaWidget.swift "large widg
 require_text '.supportedFamilies([.systemSmall])' Widget/CodexQuotaWidget.swift "small widget family is missing"
 require_text '.supportedFamilies([.systemExtraLarge])' Widget/CodexQuotaWidget.swift "large widget family is missing"
 require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift "widget container background is missing"
+require_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "minimum dark glass does not use a wallpaper-sampling material"
 require_text 'SnapshotHTTPClient.load' Widget/CodexQuotaWidget.swift "widget does not use the checked snapshot client"
 require_text 'reloadIgnoringLocalCacheData' Shared/UsageSnapshot.swift "widget HTTP cache bypass is missing"
 require_text 'addingTimeInterval(60)' Widget/CodexQuotaWidget.swift "one-minute WidgetKit fallback is missing"

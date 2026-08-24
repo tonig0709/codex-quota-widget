@@ -205,8 +205,7 @@ public struct LiquidGlassSurface: View {
     }
 
     public var body: some View {
-        RoundedRectangle(cornerRadius: 30, style: .continuous)
-            .fill(surfaceFill)
+        surfaceLayer
             .overlay {
                 RoundedRectangle(cornerRadius: 30, style: .continuous)
                     .strokeBorder(outerBorder, lineWidth: 0.8)
@@ -225,11 +224,20 @@ public struct LiquidGlassSurface: View {
             }
     }
 
-    private var surfaceFill: Color {
+    @ViewBuilder
+    private var surfaceLayer: some View {
         if isLight {
-            return Color(red: 0.93, green: 0.96, blue: 1).opacity(resolvedOpacity)
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(Color(red: 0.93, green: 0.96, blue: 1).opacity(resolvedOpacity))
+        } else {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(.black.opacity(resolvedOpacity))
+                }
         }
-        return .black.opacity(resolvedOpacity)
     }
 
     private var outerBorder: Color {
