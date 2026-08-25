@@ -110,8 +110,16 @@ func checkRender<Content: View, Background: View>(
     label: String,
     regions: [(String, CGRect)]
 ) {
-    let baseline = render(background, width: width, height: height)
-    let rendered = render(ZStack { background; content }, width: width, height: height)
+    // Native Glass is resolved by the desktop compositor, not ImageRenderer.
+    // A deterministic wallpaper keeps this headless test faithful to the real
+    // widget stack while still comparing content against the same glass layer.
+    let wallpaper = LinearGradient(
+        colors: [Color(red: 0.18, green: 0.42, blue: 0.62), Color(red: 0.52, green: 0.24, blue: 0.18)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    let baseline = render(ZStack { wallpaper; background }, width: width, height: height)
+    let rendered = render(ZStack { wallpaper; background; content }, width: width, height: height)
 
     var visiblePixels = 0
     for y in 0..<rendered.pixelsHigh {
