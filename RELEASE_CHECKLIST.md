@@ -18,9 +18,9 @@ The gate blocks release unless all of these pass:
 - **Widget discovery:** the gate seeds an enabled lower-version/build registration,
   launches the installed candidate without registering it from the script, and
   requires the App to remove only the verified obsolete extension path and elect
-  exactly one enabled current extension. A separate downgrade control then
-  proves opening the older App performs zero registration writes when a newer
-  extension is active. AppIntent metadata, both
+  exactly one enabled current extension. The newer-build decision branch is
+  checked to return before every app-controlled registration write; macOS may
+  independently elect an App when its executable is launched. AppIntent metadata, both
   sizes, assets, ATS, and signed network entitlements are checked on the built
   extension.
 - **No black or blank widget:** SwiftUI renders small/large × light/dark into

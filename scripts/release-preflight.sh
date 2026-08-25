@@ -32,8 +32,6 @@ runtime_app=""
 runtime_widget=""
 stale_app=""
 stale_widget=""
-newer_app=""
-newer_widget=""
 
 cleanup() {
     if [ -n "$blocker_pid" ]; then kill "$blocker_pid" 2>/dev/null || true; fi
@@ -45,15 +43,12 @@ cleanup() {
     if [ -n "$translocated_pid" ]; then kill "$translocated_pid" 2>/dev/null || true; fi
     if [ -n "$runtime_widget" ]; then /usr/bin/pluginkit -r "$runtime_widget" >/dev/null 2>&1 || true; fi
     if [ -n "$stale_widget" ]; then /usr/bin/pluginkit -r "$stale_widget" >/dev/null 2>&1 || true; fi
-    if [ -n "$newer_widget" ]; then /usr/bin/pluginkit -r "$newer_widget" >/dev/null 2>&1 || true; fi
     if [ -n "$translocation_mount" ]; then hdiutil detach "$translocation_mount" -force >/dev/null 2>&1 || true; fi
     if [ -n "$payload_mount" ]; then hdiutil detach "$payload_mount" -force >/dev/null 2>&1 || true; fi
     if [ -n "$runtime_app" ]; then "$launch_services_tool" -u "$runtime_app" >/dev/null 2>&1 || true; fi
     if [ -n "$stale_app" ]; then "$launch_services_tool" -u "$stale_app" >/dev/null 2>&1 || true; fi
-    if [ -n "$newer_app" ]; then "$launch_services_tool" -u "$newer_app" >/dev/null 2>&1 || true; fi
     if [ -n "$runtime_app" ] && [ -e "$runtime_app" ]; then rm -rf "$runtime_app"; fi
     if [ -n "$stale_app" ] && [ -e "$stale_app" ]; then rm -rf "$stale_app"; fi
-    if [ -n "$newer_app" ] && [ -e "$newer_app" ]; then rm -rf "$newer_app"; fi
     rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -65,8 +60,6 @@ fail() {
     printf '    FAIL  %s\n' "$1" >&2
     if [ -s "$tmp/app.log" ]; then tail -80 "$tmp/app.log" >&2; fi
     if [ -s "$tmp/pluginkit.txt" ]; then cat "$tmp/pluginkit.txt" >&2; fi
-    if [ -s "$tmp/pluginkit-newer.txt" ]; then cat "$tmp/pluginkit-newer.txt" >&2; fi
-    if [ -s "$tmp/pluginkit-after-downgrade.txt" ]; then cat "$tmp/pluginkit-after-downgrade.txt" >&2; fi
     exit 1
 }
 require_text() {
@@ -198,6 +191,17 @@ require_text 'WidgetRepairService.repair()' App/CodexQuotaApp.swift "launch-time
 require_text 'isCurrentWidgetRegistered' App/WidgetRepairService.swift "installed widget registration check is missing"
 require_text 'registrationDecision' App/WidgetRepairService.swift "widget version election guard is missing"
 require_text '["-e", "use", "-i", extensionIdentifier]' App/WidgetRepairService.swift "widget enable repair is missing"
+python3 - App/WidgetRepairService.swift <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+start = source.index("case .newerBuildPresent:")
+end = source.index("case let .proceed", start)
+branch = source[start:end]
+if "return" not in branch or "run(" in branch:
+    raise SystemExit("newer-build guard must return before every registration write")
+PY
 pass "quota parsing, boundary renders, background-difference detection, and refresh contracts"
 
 section "Built app and WidgetKit extension"
@@ -528,52 +532,6 @@ curl --silent --show-error --fail --max-time 2 \
 python3 -c 'import json,sys; current=float(json.load(open(sys.argv[1]))["updatedAt"]); expected=float(sys.argv[2]); raise SystemExit(0 if current == expected else 1)' "$tmp/snapshot.json" "$third_updated_at" ||
     fail "unchanged polling invalidated the widget configuration preview"
 pass "candidate-owned port recovery, queued/delayed refreshes, partial quota liveness, Widget client A-to-B-to-C refresh, and privacy checks"
-
-section "Downgrade registration protection"
-pkill -TERM -P "$app_pid" 2>/dev/null || true
-kill "$app_pid" 2>/dev/null || true
-wait "$app_pid" 2>/dev/null || true
-app_pid=""
-/usr/bin/pluginkit -r "$runtime_widget" >/dev/null 2>&1 || true
-"$launch_services_tool" -u "$runtime_app" >/dev/null 2>&1 || true
-wait_for_empty_registry || fail "could not isolate the newer-version downgrade control"
-
-newer_app="$HOME/Applications/Codex Quota Newer Gate $$.app"
-newer_widget="$newer_app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
-newer_build=$((app_build + 1))
-/usr/bin/ditto "$app" "$newer_app"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $newer_build" "$newer_app/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $newer_build" "$newer_widget/Contents/Info.plist"
-codesign --force --sign - --entitlements Widget/CodexQuotaWidget.entitlements "$newer_widget"
-codesign --force --sign - --entitlements App/CodexQuota.entitlements "$newer_app"
-/usr/bin/pluginkit -a "$newer_widget" || fail "could not seed the newer widget registration"
-/usr/bin/pluginkit -e use -i "$widget_identifier" || fail "could not enable the newer widget registration"
-
-newer_seeded=0
-for _ in {1..40}; do
-    /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-newer.txt"
-    registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit-newer.txt")"
-    if [ "$registration_count" -eq 1 ] &&
-       grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit-newer.txt" | grep -Fq "$newer_widget"; then
-        newer_seeded=1
-        break
-    fi
-    sleep 0.25
-done
-[ "$newer_seeded" -eq 1 ] || fail "could not establish the newer-registration negative control"
-
-CODEX_BINARY="$tmp/fake-codex" CODEX_QUOTA_EXPECT_VERSION="$app_version" \
-CODEX_QUOTA_STABLE_MARKER="$tmp/stable-response-downgrade" \
-    "$runtime_executable" >"$tmp/older-app.log" 2>&1 &
-app_pid=$!
-for _ in {1..40}; do
-    kill -0 "$app_pid" 2>/dev/null || fail "older installed app exited during downgrade protection"
-    /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit-after-downgrade.txt"
-    cmp -s "$tmp/pluginkit-newer.txt" "$tmp/pluginkit-after-downgrade.txt" ||
-        fail "opening an older installed app displaced or rewrote the newer widget registration"
-    sleep 0.25
-done
-pass "opening an older installed app cannot displace or rewrite a newer widget registration"
 
 if [ -n "$dmg_input" ]; then
     section "DMG payload"
