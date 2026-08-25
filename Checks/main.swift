@@ -33,8 +33,8 @@ precondition(WidgetGlassOpacity.darkFilmOpacity(WidgetGlassOpacity.minimum) == 0
 precondition(WidgetGlassOpacity.darkFilmOpacity(WidgetGlassOpacity.maximum) == 0.94)
 precondition(WidgetGlassOpacity.darkFilmOpacity(0.5) < WidgetGlassOpacity.darkFilmOpacity(0.86))
 precondition(UsageSnapshot.placeholder.resolvedAppearance == .dark)
-precondition(SnapshotStore.smallWidgetKind == "dev.codexquota.widget.small.v4")
-precondition(SnapshotStore.largeWidgetKind == "dev.codexquota.widget.large.v4")
+precondition(SnapshotStore.smallWidgetKind == "dev.codexquota.widget.small.v5")
+precondition(SnapshotStore.largeWidgetKind == "dev.codexquota.widget.large.v5")
 precondition(SnapshotHTTPClient.endpoint.absoluteString == "http://127.0.0.1:48193/snapshot")
 
 #if canImport(AppKit)

@@ -179,7 +179,9 @@ require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift 
 forbid_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "legacy material flattens minimum dark glass to gray"
 require_text '.glassEffect(' Shared/QuotaWidgetView.swift "native macOS Liquid Glass path is missing"
 require_text 'WidgetGlassOpacity.darkFilmOpacity' Shared/QuotaWidgetView.swift "adjustable dark glass film is missing"
-require_text 'AppearanceV4ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the cache-safe V4 appearance intent"
+require_text 'AppearanceV5ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the crash-safe V5 appearance intent"
+require_text 'controlStyle: .field' Shared/AppearanceV3ConfigurationIntent.swift "safe opacity field is missing"
+forbid_text 'struct AppearanceV4ConfigurationIntent' Shared/AppearanceV3ConfigurationIntent.swift "crash-prone V4 slider intent is still shipped"
 require_text 'SnapshotHTTPClient.load' Widget/CodexQuotaWidget.swift "widget does not use the checked snapshot client"
 require_text 'context.isPreview ? UsageSnapshot.placeholder : SnapshotStore.load()' Widget/CodexQuotaWidget.swift "configuration preview does not use an immediate cached snapshot"
 require_text 'reloadIgnoringLocalCacheData' Shared/UsageSnapshot.swift "widget HTTP cache bypass is missing"
@@ -269,7 +271,7 @@ fi
 
 plutil -convert json -o "$tmp/app-intents.json" "$app_metadata"
 plutil -convert json -o "$tmp/widget-intents.json" "$widget_metadata"
-for token in AppearanceV4ConfigurationIntent useLightAppearance glassOpacity; do
+for token in AppearanceV5ConfigurationIntent useLightAppearance glassOpacity; do
     grep -Fq "$token" "$tmp/app-intents.json" || fail "app intent metadata lacks $token"
     grep -Fq "$token" "$tmp/widget-intents.json" || fail "widget intent metadata lacks $token"
 done
@@ -279,16 +281,22 @@ import sys
 
 for path in sys.argv[1:]:
     with open(path, encoding="utf-8") as file:
-        action = json.load(file)["actions"]["AppearanceV4ConfigurationIntent"]
+        actions = json.load(file)["actions"]
+        if "AppearanceV4ConfigurationIntent" in actions:
+            raise SystemExit(f"{path}: crash-prone V4 slider metadata is still present")
+        action = actions["AppearanceV5ConfigurationIntent"]
     opacity = next(item for item in action["parameters"] if item["name"] == "glassOpacity")
     metadata = opacity["typeSpecificMetadata"]
     style = metadata[metadata.index("LNValueTypeMetadataKeyNumberControlStyle") + 1]
-    if style.get("int", {}).get("wrapper") != 2:
-        raise SystemExit(f"{path}: V4 glass opacity is not a slider")
+    if style.get("int", {}).get("wrapper") != 1:
+        raise SystemExit(f"{path}: V5 glass opacity is not the crash-safe field")
+    type_identifier = opacity["valueType"]["primitive"]["wrapper"]["typeIdentifier"]
+    if type_identifier != 7:
+        raise SystemExit(f"{path}: V5 glass opacity field is not Double-backed")
 PY
 strings "$widget_executable" > "$tmp/widget-strings.txt"
-grep -Fq 'dev.codexquota.widget.small.v4' "$tmp/widget-strings.txt" || fail "small widget kind is absent from binary"
-grep -Fq 'dev.codexquota.widget.large.v4' "$tmp/widget-strings.txt" || fail "large widget kind is absent from binary"
+grep -Fq 'dev.codexquota.widget.small.v5' "$tmp/widget-strings.txt" || fail "small widget kind is absent from binary"
+grep -Fq 'dev.codexquota.widget.large.v5' "$tmp/widget-strings.txt" || fail "large widget kind is absent from binary"
 sdk_major="$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)"
 if [ "$sdk_major" -ge 26 ]; then
     nm -u "$widget_executable" > "$tmp/widget-nm.txt"

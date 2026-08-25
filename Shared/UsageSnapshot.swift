@@ -139,8 +139,8 @@ public enum SnapshotHTTPClient {
 public enum SnapshotStore {
     // A new kind is required when the configuration intent identity changes.
     // Otherwise existing desktop instances keep editing the cached V3 schema.
-    public static let smallWidgetKind = "dev.codexquota.widget.small.v4"
-    public static let largeWidgetKind = "dev.codexquota.widget.large.v4"
+    public static let smallWidgetKind = "dev.codexquota.widget.small.v5"
+    public static let largeWidgetKind = "dev.codexquota.widget.large.v5"
     private static let key = "usageSnapshot"
 
     public static func load(defaults: UserDefaults = sharedDefaults) -> UsageSnapshot {
