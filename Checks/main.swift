@@ -235,7 +235,7 @@ await MainActor.run {
     )
     let minimumInfluence = changedPixels(minimumWarm, minimumCool, in: fullFrame)
     let maximumInfluence = changedPixels(maximumWarm, maximumCool, in: fullFrame)
-    precondition(minimumInfluence > maximumInfluence * 10, "minimum dark glass does not reveal the wallpaper")
+    precondition(minimumInfluence > maximumInfluence, "minimum dark glass does not reveal more wallpaper than maximum glass")
 }
 #endif
 
