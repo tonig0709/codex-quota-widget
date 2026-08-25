@@ -368,13 +368,19 @@ codesign --force --sign - --entitlements App/CodexQuota.entitlements "$stale_app
 /usr/bin/pluginkit -a "$stale_widget" || fail "could not seed the stale widget registration"
 /usr/bin/pluginkit -e use -i "$widget_identifier" || fail "could not enable the stale widget registration"
 stale_seeded=0
-for _ in {1..20}; do
+stale_stable=0
+for _ in {1..60}; do
     /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit.txt"
     registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit.txt")"
     if [ "$registration_count" -eq 1 ] &&
        grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit.txt" | grep -Fq "$stale_widget"; then
-        stale_seeded=1
-        break
+        stale_stable=$((stale_stable + 1))
+        if [ "$stale_stable" -ge 2 ]; then
+            stale_seeded=1
+            break
+        fi
+    else
+        stale_stable=0
     fi
     sleep 0.25
 done
@@ -460,14 +466,20 @@ sleep 2
 kill -0 "$app_pid" 2>/dev/null || fail "installed candidate app exited during startup"
 
 auto_registered=0
-for _ in {1..40}; do
+auto_registration_stable=0
+for _ in {1..80}; do
     /usr/bin/pluginkit -m -A -v -i "$widget_identifier" > "$tmp/pluginkit.txt"
     registration_count="$(awk -v id="$widget_identifier" 'index($0, id "(") { count++ } END { print count + 0 }' "$tmp/pluginkit.txt")"
     if [ "$registration_count" -eq 1 ] &&
        grep -E '^\+.*dev\.codexquota\.app\.widget' "$tmp/pluginkit.txt" | grep -Fq "$runtime_widget" &&
        ! grep -Fq "$stale_widget" "$tmp/pluginkit.txt"; then
-        auto_registered=1
-        break
+        auto_registration_stable=$((auto_registration_stable + 1))
+        if [ "$auto_registration_stable" -ge 2 ]; then
+            auto_registered=1
+            break
+        fi
+    else
+        auto_registration_stable=0
     fi
     sleep 0.25
 done
