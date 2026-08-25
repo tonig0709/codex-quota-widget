@@ -49,8 +49,8 @@ The gate blocks release unless all of these pass:
   architecture slices are checked again.
 
 The push/PR workflow and the tag workflow's required preflight both run this
-behavioral gate on macOS 14 and macOS 15. Universal slices are built and
-inspected on both runners; runtime behavior is executed on each runner's native
+behavioral gate on macOS 14, macOS 15, and macOS 26. Universal slices are built
+and inspected on every runner; runtime behavior is executed on each runner's native
 CPU architecture.
 
 ## Final desktop smoke test
@@ -65,8 +65,8 @@ publishing that draft:
 - [ ] Open **Edit Widgets**, search **Codex Quota**, and add both **小型** and
       **大型**.
 - [ ] Confirm neither size is black or blank in light and dark appearance.
-- [ ] Edit both sizes, drag the opacity slider to `0.35` and `1.00`, and confirm
-      the configuration sheet remains loaded after each change.
+- [ ] Edit both sizes, enter opacity values `0.35`, `0.44`, and `1.00`, and
+      confirm the configuration sheet remains loaded after each change.
 - [ ] Confirm the small widget shows separate 5h and weekly rings and the large
       widget shows 5h above weekly quota.
 - [ ] Generate new Codex usage and confirm quota plus seven-day trend update

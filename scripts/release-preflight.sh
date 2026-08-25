@@ -284,6 +284,16 @@ for path in sys.argv[1:]:
         actions = json.load(file)["actions"]
         if "AppearanceV4ConfigurationIntent" in actions:
             raise SystemExit(f"{path}: crash-prone V4 slider metadata is still present")
+        for name, candidate in actions.items():
+            for parameter in candidate.get("parameters", []):
+                if parameter.get("name") != "glassOpacity":
+                    continue
+                candidate_metadata = parameter.get("typeSpecificMetadata", [])
+                key = "LNValueTypeMetadataKeyNumberControlStyle"
+                if key in candidate_metadata:
+                    candidate_style = candidate_metadata[candidate_metadata.index(key) + 1]
+                    if candidate_style.get("int", {}).get("wrapper") == 2:
+                        raise SystemExit(f"{path}: {name} contains a crash-prone opacity slider")
         action = actions["AppearanceV5ConfigurationIntent"]
     opacity = next(item for item in action["parameters"] if item["name"] == "glassOpacity")
     metadata = opacity["typeSpecificMetadata"]
