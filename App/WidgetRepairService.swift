@@ -12,7 +12,7 @@ enum WidgetRepairService {
     }
 
     private enum CleanupDecision {
-        case proceed
+        case proceed(staleWidgets: [URL])
         case newerBuildPresent
         case unavailable
     }
@@ -53,8 +53,12 @@ enum WidgetRepairService {
                     // unregistering this older path can still displace the active entry
                     // because both extensions share the same bundle identifier.
                     return
-                case .proceed:
-                    break
+                case let .proceed(staleWidgets):
+                    // `pluginkit -r` is only safe after the complete registration set
+                    // proves every other path is older than this installed app.
+                    for staleWidget in staleWidgets {
+                        run("/usr/bin/pluginkit", arguments: ["-r", staleWidget.path])
+                    }
                 }
                 // A stale extension keeps a previous bundle version in memory.
                 // WidgetKit then rejects the new archive or removes it from the gallery.
@@ -109,7 +113,7 @@ enum WidgetRepairService {
                 return .unavailable
             }
         }
-        return .proceed
+        return .proceed(staleWidgets: stale.map(\.url))
     }
 
     private static func registrations() -> [Registration]? {

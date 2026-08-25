@@ -15,10 +15,12 @@ development can run the non-destructive parser and render checks with
 
 The gate blocks release unless all of these pass:
 
-- **Widget discovery:** the gate seeds an enabled lower-build registration,
+- **Widget discovery:** the gate seeds an enabled lower-version/build registration,
   launches the installed candidate without registering it from the script, and
-  requires the App to elect exactly one enabled current extension without using
-  `pluginkit -r` on the shared widget identifier. AppIntent metadata, both
+  requires the App to remove only the verified obsolete extension path and elect
+  exactly one enabled current extension. The newer-build decision branch is
+  checked to return before every app-controlled registration write; macOS may
+  independently elect an App when its executable is launched. AppIntent metadata, both
   sizes, assets, ATS, and signed network entitlements are checked on the built
   extension.
 - **No black or blank widget:** SwiftUI renders small/large × light/dark into
@@ -31,10 +33,12 @@ The gate blocks release unless all of these pass:
   response plus a refresh notification while work is in flight, forced port-
   collision recovery, candidate process ownership of the bridge, and A→B→C
   refresh of 5h, weekly, and seven-day data. C deliberately omits trend data to
-  prove quota liveness without erasing B's valid trend. The production
-  `CodexQuotaProvider` is compiled into the probe and executed against A, B, and
-  C, including its default HTTP endpoint, cache prevention, unexpected-route
-  rejection, and identity removal.
+  prove quota liveness without erasing B's valid trend. An unchanged follow-up
+  proves polling cannot invalidate the widget editor, and configuration
+  snapshots use the immediate cache instead of waiting on the live bridge. The
+  production `CodexQuotaProvider` is compiled into the probe and executed
+  against A, B, and C, including its default HTTP endpoint, cache prevention,
+  unexpected-route rejection, and identity removal.
 - **Update safety:** the bundle build is greater than every existing release
   tag; temporary DMG/build copies cannot run registration repair or occupy
   port 48193.
