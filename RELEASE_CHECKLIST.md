@@ -68,6 +68,9 @@ publishing that draft:
 - [ ] Confirm neither size is black or blank in light and dark appearance.
 - [ ] Edit both sizes, enter opacity values `0.35`, `0.44`, and `1.00`, and
       confirm the configuration sheet remains loaded after each change.
+- [ ] In dark appearance over a colorful wallpaper, confirm `0.35` visibly
+      transmits the wallpaper's colors/details while text stays readable, and
+      `1.00` remains uniformly near-black. A gray opaque `0.35` is a failure.
 - [ ] Confirm the small widget shows separate 5h and weekly rings and the large
       widget shows 5h above weekly quota.
 - [ ] Generate new Codex usage and confirm quota plus seven-day trend update
