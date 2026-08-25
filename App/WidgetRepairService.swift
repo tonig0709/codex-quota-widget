@@ -12,7 +12,7 @@ enum WidgetRepairService {
     }
 
     private enum CleanupDecision {
-        case proceed
+        case proceed(staleApplications: [URL])
         case newerBuildPresent
         case unavailable
     }
@@ -53,8 +53,13 @@ enum WidgetRepairService {
                     // unregistering this older path can still displace the active entry
                     // because both extensions share the same bundle identifier.
                     return
-                case .proceed:
-                    break
+                case let .proceed(staleApplications):
+                    // Remove the obsolete containing apps from LaunchServices first.
+                    // Unlike `pluginkit -r`, this targets a concrete old app path and
+                    // does not unregister the shared widget identifier globally.
+                    for staleApplication in staleApplications {
+                        run(launchServicesTool, arguments: ["-u", staleApplication.path])
+                    }
                 }
                 // A stale extension keeps a previous bundle version in memory.
                 // WidgetKit then rejects the new archive or removes it from the gallery.
@@ -109,7 +114,13 @@ enum WidgetRepairService {
                 return .unavailable
             }
         }
-        return .proceed
+        let staleApplications = Array(Set(stale.map { registration in
+            registration.url
+                .deletingLastPathComponent() // PlugIns
+                .deletingLastPathComponent() // Contents
+                .deletingLastPathComponent() // App bundle
+        }))
+        return .proceed(staleApplications: staleApplications)
     }
 
     private static func registrations() -> [Registration]? {

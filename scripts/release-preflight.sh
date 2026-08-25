@@ -183,6 +183,7 @@ require_text 'reloadIgnoringLocalCacheData' Shared/UsageSnapshot.swift "widget H
 require_text 'addingTimeInterval(60)' Widget/CodexQuotaWidget.swift "one-minute WidgetKit fallback is missing"
 require_text 'withTimeInterval: 15' App/CodexAppServer.swift "15-second app refresh timer is missing"
 require_text 'if snapshotChanged' App/CodexAppServer.swift "unchanged polling can still invalidate widget configuration previews"
+require_text 'arguments: ["-u", staleApplication.path]' App/WidgetRepairService.swift "obsolete app registrations are not removed by their concrete LaunchServices path"
 require_text 'private func retry()' App/CodexAppServer.swift "snapshot listener recovery is missing"
 require_text 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexAppServer.swift "small widget reload is missing"
 require_text 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift "large widget reload is missing"
