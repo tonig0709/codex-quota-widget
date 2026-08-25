@@ -60,8 +60,9 @@ registration database and off-screen rendering, but a headless GitHub runner
 cannot click the widget gallery or inspect the live desktop compositor. Before
 publishing that draft:
 
-- [ ] Remove prior test builds, drag the new app into **Applications**, eject
-      the DMG, and launch only that copy.
+- [ ] Remove every existing **Codex Quota** desktop widget and prior test build,
+      drag the new app into **Applications**, eject the DMG, and launch only
+      that copy.
 - [ ] Open **Edit Widgets**, search **Codex Quota**, and add both **小型** and
       **大型**.
 - [ ] Confirm neither size is black or blank in light and dark appearance.
