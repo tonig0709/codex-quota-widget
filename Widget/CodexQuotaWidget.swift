@@ -14,10 +14,9 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> CodexQuotaEntry {
-        if context.isPreview {
-            return previewEntry(for: configuration)
-        }
-        return await entry(for: configuration)
+        var snapshot = context.isPreview ? UsageSnapshot.placeholder : SnapshotStore.load()
+        snapshot.appearance = configuration.useLightAppearance ? .light : .dark
+        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
     func timeline(for configuration: AppearanceV3ConfigurationIntent, in context: Context) async -> Timeline<CodexQuotaEntry> {
@@ -25,12 +24,6 @@ struct CodexQuotaProvider: AppIntentTimelineProvider {
         // The app explicitly reloads both widget kinds on a data change. This
         // one-minute policy is the safe fallback if macOS coalesces that request.
         return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(60)))
-    }
-
-    private func previewEntry(for configuration: AppearanceV3ConfigurationIntent) -> CodexQuotaEntry {
-        var snapshot = UsageSnapshot.placeholder
-        snapshot.appearance = configuration.useLightAppearance ? .light : .dark
-        return CodexQuotaEntry(date: .now, snapshot: snapshot, glassOpacity: WidgetGlassOpacity.clamped(configuration.glassOpacity))
     }
 
     private func entry(for configuration: AppearanceV3ConfigurationIntent) async -> CodexQuotaEntry {

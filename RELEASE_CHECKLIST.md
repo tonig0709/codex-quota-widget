@@ -31,10 +31,12 @@ The gate blocks release unless all of these pass:
   response plus a refresh notification while work is in flight, forced port-
   collision recovery, candidate process ownership of the bridge, and A→B→C
   refresh of 5h, weekly, and seven-day data. C deliberately omits trend data to
-  prove quota liveness without erasing B's valid trend. The production
-  `CodexQuotaProvider` is compiled into the probe and executed against A, B, and
-  C, including its default HTTP endpoint, cache prevention, unexpected-route
-  rejection, and identity removal.
+  prove quota liveness without erasing B's valid trend. An unchanged follow-up
+  proves polling cannot invalidate the widget editor, and configuration
+  snapshots use the immediate cache instead of waiting on the live bridge. The
+  production `CodexQuotaProvider` is compiled into the probe and executed
+  against A, B, and C, including its default HTTP endpoint, cache prevention,
+  unexpected-route rejection, and identity removal.
 - **Update safety:** the bundle build is greater than every existing release
   tag; temporary DMG/build copies cannot run registration repair or occupy
   port 48193.

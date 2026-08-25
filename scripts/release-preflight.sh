@@ -178,9 +178,11 @@ require_text '.supportedFamilies([.systemExtraLarge])' Widget/CodexQuotaWidget.s
 require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift "widget container background is missing"
 require_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "minimum dark glass does not use a wallpaper-sampling material"
 require_text 'SnapshotHTTPClient.load' Widget/CodexQuotaWidget.swift "widget does not use the checked snapshot client"
+require_text 'context.isPreview ? UsageSnapshot.placeholder : SnapshotStore.load()' Widget/CodexQuotaWidget.swift "configuration preview does not use an immediate cached snapshot"
 require_text 'reloadIgnoringLocalCacheData' Shared/UsageSnapshot.swift "widget HTTP cache bypass is missing"
 require_text 'addingTimeInterval(60)' Widget/CodexQuotaWidget.swift "one-minute WidgetKit fallback is missing"
 require_text 'withTimeInterval: 15' App/CodexAppServer.swift "15-second app refresh timer is missing"
+require_text 'if snapshotChanged' App/CodexAppServer.swift "unchanged polling can still invalidate widget configuration previews"
 require_text 'private func retry()' App/CodexAppServer.swift "snapshot listener recovery is missing"
 require_text 'reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)' App/CodexAppServer.swift "small widget reload is missing"
 require_text 'reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)' App/CodexAppServer.swift "large widget reload is missing"
@@ -365,8 +367,10 @@ for line in sys.stdin:
             "secondary": {"usedPercent": weekly_used, "windowDurationMins": 10080}
         }}}
     elif method == "account/usage/read":
-        if generation >= 3:
+        if generation == 3:
             continue
+        if generation >= 4:
+            time.sleep(3)
         if generation == 1:
             time.sleep(4)
         values = [101, 202, 303, 404, 505, 606, 1111] if generation == 1 else [404, 808, 1212, 1616, 2424, 3232, 4646]
@@ -379,6 +383,10 @@ for line in sys.stdin:
         print(json.dumps(response), flush=True)
         if method == "account/rateLimits/read" and generation == 1:
             print(json.dumps({"method": "account/rateLimits/updated", "params": {}}), flush=True)
+        if method == "account/rateLimits/read" and generation == 3:
+            print(json.dumps({"method": "account/rateLimits/updated", "params": {}}), flush=True)
+        if method == "account/usage/read" and generation >= 4:
+            open(os.environ["CODEX_QUOTA_STABLE_MARKER"], "a").close()
 PY
 chmod +x "$tmp/fake-codex"
 
@@ -391,6 +399,7 @@ done
 [ -f "$tmp/blocker-ready" ] || fail "could not reserve the snapshot port for the recovery test"
 
 CODEX_BINARY="$tmp/fake-codex" CODEX_QUOTA_EXPECT_VERSION="$app_version" \
+CODEX_QUOTA_STABLE_MARKER="$tmp/stable-response" \
     "$runtime_executable" >"$tmp/app.log" 2>&1 &
 app_pid=$!
 sleep 2
@@ -497,6 +506,18 @@ CODEX_QUOTA_EXPECT_WEEKLY=72 \
 CODEX_QUOTA_EXPECT_DAILY_COUNT=7 \
 CODEX_QUOTA_EXPECT_LAST_TOKENS=4646 \
     "$tmp/widget-provider-probe"
+third_updated_at="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["updatedAt"])' "$tmp/snapshot.json")"
+for _ in {1..20}; do
+    [ -f "$tmp/stable-response" ] && break
+    sleep 0.25
+done
+[ -f "$tmp/stable-response" ] || fail "unchanged refresh control did not complete"
+sleep 1
+curl --silent --show-error --fail --max-time 2 \
+    http://127.0.0.1:48193/snapshot \
+    -o "$tmp/snapshot.json"
+python3 -c 'import json,sys; current=float(json.load(open(sys.argv[1]))["updatedAt"]); expected=float(sys.argv[2]); raise SystemExit(0 if current == expected else 1)' "$tmp/snapshot.json" "$third_updated_at" ||
+    fail "unchanged polling invalidated the widget configuration preview"
 pass "candidate-owned port recovery, queued/delayed refreshes, partial quota liveness, Widget client A-to-B-to-C refresh, and privacy checks"
 
 if [ -n "$dmg_input" ]; then

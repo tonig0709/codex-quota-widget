@@ -333,18 +333,22 @@ final class CodexAppServer: ObservableObject {
         refreshTimeout?.cancel()
         refreshTimeout = nil
 
+        var snapshotChanged = false
         if let rateLimits = pending.rateLimits {
             if rateLimits.fiveHour != snapshot.fiveHour {
                 snapshot.fiveHour = rateLimits.fiveHour
+                snapshotChanged = true
             }
             if rateLimits.weekly != snapshot.weekly {
                 snapshot.weekly = rateLimits.weekly
+                snapshotChanged = true
             }
         }
         if let dailyUsage = pending.dailyUsage, dailyUsage != snapshot.dailyUsage {
             snapshot.dailyUsage = dailyUsage
+            snapshotChanged = true
         }
-        if pending.rateLimits != nil || pending.dailyUsage != nil {
+        if snapshotChanged {
             persist(markDataRefresh: true)
         }
 
