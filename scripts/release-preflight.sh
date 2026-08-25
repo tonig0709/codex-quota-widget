@@ -65,6 +65,8 @@ fail() {
     printf '    FAIL  %s\n' "$1" >&2
     if [ -s "$tmp/app.log" ]; then tail -80 "$tmp/app.log" >&2; fi
     if [ -s "$tmp/pluginkit.txt" ]; then cat "$tmp/pluginkit.txt" >&2; fi
+    if [ -s "$tmp/pluginkit-newer.txt" ]; then cat "$tmp/pluginkit-newer.txt" >&2; fi
+    if [ -s "$tmp/pluginkit-after-downgrade.txt" ]; then cat "$tmp/pluginkit-after-downgrade.txt" >&2; fi
     exit 1
 }
 require_text() {
@@ -540,8 +542,6 @@ newer_app="$HOME/Applications/Codex Quota Newer Gate $$.app"
 newer_widget="$newer_app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
 newer_build=$((app_build + 1))
 /usr/bin/ditto "$app" "$newer_app"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 99.0.0" "$newer_app/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 99.0.0" "$newer_widget/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $newer_build" "$newer_app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $newer_build" "$newer_widget/Contents/Info.plist"
 codesign --force --sign - --entitlements Widget/CodexQuotaWidget.entitlements "$newer_widget"
