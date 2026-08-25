@@ -11,9 +11,11 @@ struct AppearanceV3ConfigurationIntent: WidgetConfigurationIntent {
     var useLightAppearance: Bool
 
     @Parameter(
-        title: "玻璃不透明度",
+        title: "玻璃不透明度（0.35–1.00）",
         default: 0.86,
-        controlStyle: .slider,
+        // macOS 27's WidgetConfigurationExtension crashes while committing
+        // AppIntent Double sliders. A field preserves the saved Double value.
+        controlStyle: .field,
         inclusiveRange: (lowerBound: 0.35, upperBound: 1.0)
     )
     var glassOpacity: Double

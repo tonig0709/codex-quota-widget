@@ -177,6 +177,8 @@ require_text '.supportedFamilies([.systemSmall])' Widget/CodexQuotaWidget.swift 
 require_text '.supportedFamilies([.systemExtraLarge])' Widget/CodexQuotaWidget.swift "large widget family is missing"
 require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift "widget container background is missing"
 require_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "minimum dark glass does not use a wallpaper-sampling material"
+require_text 'controlStyle: .field' Shared/AppearanceV3ConfigurationIntent.swift "glass opacity does not use the crash-safe field control"
+forbid_text 'controlStyle: .slider' Shared/AppearanceV3ConfigurationIntent.swift "glass opacity reintroduces the crashing macOS widget slider"
 require_text 'SnapshotHTTPClient.load' Widget/CodexQuotaWidget.swift "widget does not use the checked snapshot client"
 require_text 'context.isPreview ? UsageSnapshot.placeholder : SnapshotStore.load()' Widget/CodexQuotaWidget.swift "configuration preview does not use an immediate cached snapshot"
 require_text 'reloadIgnoringLocalCacheData' Shared/UsageSnapshot.swift "widget HTTP cache bypass is missing"

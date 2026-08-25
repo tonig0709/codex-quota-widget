@@ -3,6 +3,7 @@ name: Test
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   release-gate:
@@ -53,3 +54,11 @@ jobs:
           ./scripts/release-preflight.sh \
             "$PWD/build/Build/Products/Release/Codex Quota.app" \
             "$PWD/Codex-Quota-test.dmg"
+
+      - name: Upload local test DMG
+        if: github.event_name == 'workflow_dispatch' && matrix.os == 'macos-15'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Codex-Quota-local-macOS
+          path: Codex-Quota-test.dmg
+          retention-days: 7

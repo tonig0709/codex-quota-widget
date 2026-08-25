@@ -65,6 +65,8 @@ publishing that draft:
 - [ ] Open **Edit Widgets**, search **Codex Quota**, and add both **小型** and
       **大型**.
 - [ ] Confirm neither size is black or blank in light and dark appearance.
+- [ ] Edit both sizes, enter the opacity boundaries `0.35` and `1.00`, and
+      confirm the configuration sheet remains loaded after each change.
 - [ ] Confirm the small widget shows separate 5h and weekly rings and the large
       widget shows 5h above weekly quota.
 - [ ] Generate new Codex usage and confirm quota plus seven-day trend update
