@@ -178,8 +178,8 @@ require_text '.supportedFamilies([.systemExtraLarge])' Widget/CodexQuotaWidget.s
 require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift "widget container background is missing"
 forbid_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "legacy material flattens minimum dark glass to gray"
 require_text '.codexWidgetSurface(' Widget/CodexQuotaWidget.swift "widget content is not attached to its glass surface"
-require_text '.glassEffect(' Widget/CodexQuotaWidget.swift "native Liquid Glass is not attached to widget content"
-require_text '.containerBackground(for: .widget) { Color.clear }' Widget/CodexQuotaWidget.swift "native glass is still trapped inside an opaque widget background"
+require_text 'WidgetTransparentDarkSurface' Widget/CodexQuotaWidget.swift "transparent dark widget background is missing"
+forbid_text '.glassEffect(' Widget/CodexQuotaWidget.swift "glassEffect on a WidgetKit snapshot can hide all foreground content"
 require_text 'WidgetGlassOpacity.darkFilmOpacity' Shared/QuotaWidgetView.swift "adjustable dark glass film is missing"
 require_text 'AppearanceV5ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the crash-safe V5 appearance intent"
 require_text 'controlStyle: .field' Shared/AppearanceV3ConfigurationIntent.swift "safe opacity field is missing"
@@ -309,11 +309,6 @@ PY
 strings "$widget_executable" > "$tmp/widget-strings.txt"
 grep -Fq 'dev.codexquota.widget.small.v5' "$tmp/widget-strings.txt" || fail "small widget kind is absent from binary"
 grep -Fq 'dev.codexquota.widget.large.v5' "$tmp/widget-strings.txt" || fail "large widget kind is absent from binary"
-sdk_major="$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)"
-if [ "$sdk_major" -ge 26 ]; then
-    nm -u "$widget_executable" > "$tmp/widget-nm.txt"
-    grep -Fq 'glassEffect' "$tmp/widget-nm.txt" || fail "Xcode 26 build omitted the native Liquid Glass symbol"
-fi
 pass "signed, version-matched app and extension with both widget configurations"
 
 section "Isolated WidgetKit registry"

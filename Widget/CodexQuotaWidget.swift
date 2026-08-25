@@ -84,8 +84,6 @@ private struct CodexWidgetSurfaceModifier: ViewModifier {
     let opacity: Double
     let accent: Color
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     @ViewBuilder
     func body(content: Content) -> some View {
         if isLight {
@@ -93,46 +91,39 @@ private struct CodexWidgetSurfaceModifier: ViewModifier {
                 LiquidGlassSurface(isLight: true, opacity: opacity, accent: accent)
             }
         } else {
-#if compiler(>=6.2)
-            if #available(macOS 26.0, *) {
-                let resolvedOpacity = reduceTransparency ? 1 : WidgetGlassOpacity.clamped(opacity)
-                let shape = RoundedRectangle(cornerRadius: 30, style: .continuous)
-
-                content
-                    .background {
-                        shape.fill(.black.opacity(WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)))
-                    }
-                    .glassEffect(
-                        .clear.tint(.black.opacity(WidgetGlassOpacity.darkGlassTintOpacity(resolvedOpacity))),
-                        in: shape
-                    )
-                    .overlay {
-                        shape
-                            .strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
-                            .overlay {
-                                shape.inset(by: 1)
-                                    .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
-                            }
-                    }
-                    .overlay(alignment: .top) {
-                        Capsule()
-                            .fill(.white.opacity(0.18))
-                            .frame(height: 0.75)
-                            .padding(.horizontal, 36)
-                            .padding(.top, 1)
-                    }
-                    .containerBackground(for: .widget) { Color.clear }
-            } else {
-                content.containerBackground(for: .widget) {
-                    LiquidGlassSurface(isLight: false, opacity: opacity, accent: accent)
-                }
-            }
-#else
             content.containerBackground(for: .widget) {
-                LiquidGlassSurface(isLight: false, opacity: opacity, accent: accent)
+                WidgetTransparentDarkSurface(opacity: opacity)
             }
-#endif
         }
+    }
+}
+
+private struct WidgetTransparentDarkSurface: View {
+    let opacity: Double
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        let resolvedOpacity = reduceTransparency ? 1 : WidgetGlassOpacity.clamped(opacity)
+        let shape = RoundedRectangle(cornerRadius: 30, style: .continuous)
+
+        shape
+            .fill(.black.opacity(WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)))
+            .overlay {
+                shape
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
+                    .overlay {
+                        shape.inset(by: 1)
+                            .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+                    }
+            }
+            .overlay(alignment: .top) {
+                Capsule()
+                    .fill(.white.opacity(0.18))
+                    .frame(height: 0.75)
+                    .padding(.horizontal, 36)
+                    .padding(.top, 1)
+            }
     }
 }
 
