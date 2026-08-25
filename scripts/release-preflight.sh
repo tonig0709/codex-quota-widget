@@ -306,6 +306,8 @@ stale_app="$HOME/Applications/Codex Quota Stale Gate $$.app"
 stale_build=$((app_build - 1))
 /usr/bin/ditto "$app" "$stale_app"
 stale_widget="$stale_app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 0.0.0" "$stale_app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 0.0.0" "$stale_widget/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $stale_build" "$stale_app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $stale_build" "$stale_widget/Contents/Info.plist"
 codesign --force --sign - --entitlements Widget/CodexQuotaWidget.entitlements "$stale_widget"
@@ -325,7 +327,7 @@ for _ in {1..20}; do
     sleep 0.25
 done
 [ "$stale_seeded" -eq 1 ] || fail "could not establish the stale-registration negative control"
-pass "a stale enabled extension was seeded without registering the candidate"
+pass "a lower-version enabled extension was seeded without registering the candidate"
 
 /usr/bin/ditto "$app" "$runtime_app"
 runtime_widget="$runtime_app/Contents/PlugIns/CodexQuotaWidgetExtension.appex"

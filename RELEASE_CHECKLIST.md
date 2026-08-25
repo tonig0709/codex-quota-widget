@@ -15,7 +15,7 @@ development can run the non-destructive parser and render checks with
 
 The gate blocks release unless all of these pass:
 
-- **Widget discovery:** the gate seeds an enabled lower-build registration,
+- **Widget discovery:** the gate seeds an enabled lower-version/build registration,
   launches the installed candidate without registering it from the script, and
   requires the App to elect exactly one enabled current extension without using
   `pluginkit -r` on the shared widget identifier. AppIntent metadata, both
