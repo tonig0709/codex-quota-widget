@@ -124,7 +124,7 @@ ruby -r yaml - .github/workflows/release.yml .github/workflows/test.yml <<'RUBY'
 release = YAML.load_file(ARGV[0]).fetch("jobs")
 test = YAML.load_file(ARGV[1]).fetch("jobs")
 raise "release must depend on preflight" unless release.fetch("release").fetch("needs") == "preflight"
-expected_os = ["macos-14", "macos-15"]
+expected_os = ["macos-14", "macos-15", "macos-26"]
 release_os = release.fetch("preflight").fetch("strategy").fetch("matrix").fetch("os")
 test_os = test.fetch("release-gate").fetch("strategy").fetch("matrix").fetch("os")
 raise "release preflight OS matrix is incomplete" unless release_os == expected_os
@@ -177,6 +177,8 @@ require_text '.supportedFamilies([.systemSmall])' Widget/CodexQuotaWidget.swift 
 require_text '.supportedFamilies([.systemExtraLarge])' Widget/CodexQuotaWidget.swift "large widget family is missing"
 require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift "widget container background is missing"
 forbid_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "legacy material flattens minimum dark glass to gray"
+require_text '.glassEffect(' Shared/QuotaWidgetView.swift "native macOS Liquid Glass path is missing"
+require_text 'WidgetGlassOpacity.darkFilmOpacity' Shared/QuotaWidgetView.swift "adjustable dark glass film is missing"
 require_text 'AppearanceV4ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the cache-safe V4 appearance intent"
 require_text 'SnapshotHTTPClient.load' Widget/CodexQuotaWidget.swift "widget does not use the checked snapshot client"
 require_text 'context.isPreview ? UsageSnapshot.placeholder : SnapshotStore.load()' Widget/CodexQuotaWidget.swift "configuration preview does not use an immediate cached snapshot"
@@ -285,8 +287,13 @@ for path in sys.argv[1:]:
         raise SystemExit(f"{path}: V4 glass opacity is not a slider")
 PY
 strings "$widget_executable" > "$tmp/widget-strings.txt"
-grep -Fq 'dev.codexquota.widget.small.v3' "$tmp/widget-strings.txt" || fail "small widget kind is absent from binary"
-grep -Fq 'dev.codexquota.widget.large.v3' "$tmp/widget-strings.txt" || fail "large widget kind is absent from binary"
+grep -Fq 'dev.codexquota.widget.small.v4' "$tmp/widget-strings.txt" || fail "small widget kind is absent from binary"
+grep -Fq 'dev.codexquota.widget.large.v4' "$tmp/widget-strings.txt" || fail "large widget kind is absent from binary"
+sdk_major="$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)"
+if [ "$sdk_major" -ge 26 ]; then
+    nm -u "$widget_executable" > "$tmp/widget-nm.txt"
+    grep -Fq 'glassEffect' "$tmp/widget-nm.txt" || fail "Xcode 26 build omitted the native Liquid Glass symbol"
+fi
 pass "signed, version-matched app and extension with both widget configurations"
 
 section "Isolated WidgetKit registry"

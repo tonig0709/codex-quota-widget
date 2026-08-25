@@ -197,6 +197,8 @@ public struct LiquidGlassSurface: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private var resolvedOpacity: Double { reduceTransparency ? 1 : WidgetGlassOpacity.clamped(opacity) }
+    private var darkFilmOpacity: Double { WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity) }
+    private var darkGlassTintOpacity: Double { WidgetGlassOpacity.darkGlassTintOpacity(resolvedOpacity) }
 
     public init(isLight: Bool, opacity: Double, accent: Color) {
         self.isLight = isLight
@@ -230,9 +232,35 @@ public struct LiquidGlassSurface: View {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .fill(Color(red: 0.93, green: 0.96, blue: 1).opacity(resolvedOpacity))
         } else {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(.black.opacity(resolvedOpacity))
+            darkSurface
         }
+    }
+
+    @ViewBuilder
+    private var darkSurface: some View {
+#if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(.clear)
+                .glassEffect(
+                    .clear.tint(.black.opacity(darkGlassTintOpacity)),
+                    in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(.black.opacity(darkFilmOpacity))
+                }
+        } else {
+            fallbackDarkSurface
+        }
+#else
+        fallbackDarkSurface
+#endif
+    }
+
+    private var fallbackDarkSurface: some View {
+        RoundedRectangle(cornerRadius: 30, style: .continuous)
+            .fill(.black.opacity(resolvedOpacity))
     }
 
     private var outerBorder: Color {

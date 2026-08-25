@@ -96,6 +96,21 @@ public enum WidgetGlassOpacity {
     public static func clamped(_ value: Double) -> Double {
         min(maximum, max(minimum, value))
     }
+
+    public static func normalized(_ value: Double) -> Double {
+        (clamped(value) - minimum) / (maximum - minimum)
+    }
+
+    /// The native glass carries refraction; this film controls how close the
+    /// dark appearance is to solid black without hiding the wallpaper at the
+    /// minimum setting.
+    public static func darkFilmOpacity(_ value: Double) -> Double {
+        0.08 + pow(normalized(value), 1.15) * 0.86
+    }
+
+    public static func darkGlassTintOpacity(_ value: Double) -> Double {
+        0.28 + normalized(value) * 0.22
+    }
 }
 
 public enum SnapshotHTTPClient {
@@ -122,8 +137,10 @@ public enum SnapshotHTTPClient {
 }
 
 public enum SnapshotStore {
-    public static let smallWidgetKind = "dev.codexquota.widget.small.v3"
-    public static let largeWidgetKind = "dev.codexquota.widget.large.v3"
+    // A new kind is required when the configuration intent identity changes.
+    // Otherwise existing desktop instances keep editing the cached V3 schema.
+    public static let smallWidgetKind = "dev.codexquota.widget.small.v4"
+    public static let largeWidgetKind = "dev.codexquota.widget.large.v4"
     private static let key = "usageSnapshot"
 
     public static func load(defaults: UserDefaults = sharedDefaults) -> UsageSnapshot {
