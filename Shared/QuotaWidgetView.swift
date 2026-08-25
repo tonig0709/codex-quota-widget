@@ -231,12 +231,7 @@ public struct LiquidGlassSurface: View {
                 .fill(Color(red: 0.93, green: 0.96, blue: 1).opacity(resolvedOpacity))
         } else {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(.black.opacity(resolvedOpacity))
-                }
+                .fill(.black.opacity(resolvedOpacity))
         }
     }
 

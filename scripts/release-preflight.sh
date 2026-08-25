@@ -176,9 +176,8 @@ require_text 'LargeCodexQuotaWidget()' Widget/CodexQuotaWidget.swift "large widg
 require_text '.supportedFamilies([.systemSmall])' Widget/CodexQuotaWidget.swift "small widget family is missing"
 require_text '.supportedFamilies([.systemExtraLarge])' Widget/CodexQuotaWidget.swift "large widget family is missing"
 require_text '.containerBackground(for: .widget)' Widget/CodexQuotaWidget.swift "widget container background is missing"
-require_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "minimum dark glass does not use a wallpaper-sampling material"
-require_text 'controlStyle: .field' Shared/AppearanceV3ConfigurationIntent.swift "glass opacity does not use the crash-safe field control"
-forbid_text 'controlStyle: .slider' Shared/AppearanceV3ConfigurationIntent.swift "glass opacity reintroduces the crashing macOS widget slider"
+forbid_text '.fill(.ultraThinMaterial)' Shared/QuotaWidgetView.swift "legacy material flattens minimum dark glass to gray"
+require_text 'AppearanceV4ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the cache-safe V4 appearance intent"
 require_text 'SnapshotHTTPClient.load' Widget/CodexQuotaWidget.swift "widget does not use the checked snapshot client"
 require_text 'context.isPreview ? UsageSnapshot.placeholder : SnapshotStore.load()' Widget/CodexQuotaWidget.swift "configuration preview does not use an immediate cached snapshot"
 require_text 'reloadIgnoringLocalCacheData' Shared/UsageSnapshot.swift "widget HTTP cache bypass is missing"
@@ -268,10 +267,23 @@ fi
 
 plutil -convert json -o "$tmp/app-intents.json" "$app_metadata"
 plutil -convert json -o "$tmp/widget-intents.json" "$widget_metadata"
-for token in AppearanceV3ConfigurationIntent useLightAppearance glassOpacity; do
+for token in AppearanceV4ConfigurationIntent useLightAppearance glassOpacity; do
     grep -Fq "$token" "$tmp/app-intents.json" || fail "app intent metadata lacks $token"
     grep -Fq "$token" "$tmp/widget-intents.json" || fail "widget intent metadata lacks $token"
 done
+python3 - "$tmp/app-intents.json" "$tmp/widget-intents.json" <<'PY'
+import json
+import sys
+
+for path in sys.argv[1:]:
+    with open(path, encoding="utf-8") as file:
+        action = json.load(file)["actions"]["AppearanceV4ConfigurationIntent"]
+    opacity = next(item for item in action["parameters"] if item["name"] == "glassOpacity")
+    metadata = opacity["typeSpecificMetadata"]
+    style = metadata[metadata.index("LNValueTypeMetadataKeyNumberControlStyle") + 1]
+    if style.get("int", {}).get("wrapper") != 2:
+        raise SystemExit(f"{path}: V4 glass opacity is not a slider")
+PY
 strings "$widget_executable" > "$tmp/widget-strings.txt"
 grep -Fq 'dev.codexquota.widget.small.v3' "$tmp/widget-strings.txt" || fail "small widget kind is absent from binary"
 grep -Fq 'dev.codexquota.widget.large.v3' "$tmp/widget-strings.txt" || fail "large widget kind is absent from binary"

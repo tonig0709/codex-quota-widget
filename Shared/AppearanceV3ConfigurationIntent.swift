@@ -20,3 +20,21 @@ struct AppearanceV3ConfigurationIntent: WidgetConfigurationIntent {
     )
     var glassOpacity: Double
 }
+
+/// A fresh identity avoids stale V3 parameter key paths left by particle builds.
+/// Keep V3 above so WidgetKit can still decode existing saved configurations.
+struct AppearanceV4ConfigurationIntent: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "显示设置"
+    static let description = IntentDescription("选择此小组件的深浅色外观与玻璃不透明度。")
+
+    @Parameter(title: "浅色外观", default: false)
+    var useLightAppearance: Bool
+
+    @Parameter(
+        title: "玻璃不透明度",
+        default: 0.86,
+        controlStyle: .slider,
+        inclusiveRange: (lowerBound: 0.35, upperBound: 1.0)
+    )
+    var glassOpacity: Double
+}
