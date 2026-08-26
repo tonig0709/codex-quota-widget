@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var server: CodexAppServer
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 20) {
@@ -33,6 +34,10 @@ struct DashboardView: View {
 
                 Button("修复小组件") { WidgetRepairService.repair() }
                     .help("重新登记并刷新桌面小组件")
+                Button("桌面玻璃面板") {
+                    openWindow(id: DesktopGlassPanelView.windowID)
+                }
+                .help("打开一个独立透明、不会改变其他图标外观的桌面面板")
                 Button("刷新") { server.refresh() }
                     .disabled(server.state == .connecting)
                 if case .disconnected = server.state {
