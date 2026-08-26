@@ -344,7 +344,8 @@ kill "$translocated_pid" 2>/dev/null || true
 wait "$translocated_pid" 2>/dev/null || true
 translocated_pid=""
 /usr/bin/pluginkit -r "$translocation_mount/Codex Quota.app/Contents/PlugIns/CodexQuotaWidgetExtension.appex" >/dev/null 2>&1 || true
-hdiutil detach "$translocation_mount" >/dev/null
+hdiutil detach "$translocation_mount" >/dev/null ||
+    fail "translocated DMG remained mounted after its app terminated"
 translocation_mount=""
 pass "DMG/build copies do not run registration repair or occupy the live snapshot port"
 

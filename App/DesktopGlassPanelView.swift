@@ -46,7 +46,6 @@ struct DesktopGlassPanelView: View {
                 }
             }
             .background(DesktopPanelWindowConfigurator())
-            .task { server.connect() }
     }
 
     private var controls: some View {
