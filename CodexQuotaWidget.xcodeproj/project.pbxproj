@@ -24,6 +24,7 @@
 		A10000000000000000000010 /* WidgetRepairService.swift in App Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000E /* WidgetRepairService.swift */; };
 		A10000000000000000000011 /* InstallLocationView.swift in App Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000F /* InstallLocationView.swift */; };
 		A10000000000000000000012 /* DesktopGlassPanelView.swift in App Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* DesktopGlassPanelView.swift */; };
+		A10000000000000000000013 /* GlassSettingsView.swift in App Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* GlassSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +60,7 @@
 		B1000000000000000000000E /* WidgetRepairService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetRepairService.swift; sourceTree = "<group>"; };
 		B1000000000000000000000F /* InstallLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallLocationView.swift; sourceTree = "<group>"; };
 		B10000000000000000000010 /* DesktopGlassPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopGlassPanelView.swift; sourceTree = "<group>"; };
+		B10000000000000000000011 /* GlassSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,7 +80,7 @@
 			);
 			sourceTree = "<group>";
 		};
-		F20000000000000000000002 /* App */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000010, B1000000000000000000000B, B1000000000000000000000E, B1000000000000000000000F, ); };
+		F20000000000000000000002 /* App */ = {isa = PBXGroup; path = App; sourceTree = "<group>"; children = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000010, B10000000000000000000011, B1000000000000000000000B, B1000000000000000000000E, B1000000000000000000000F, ); };
 		F20000000000000000000003 /* Shared */ = {isa = PBXGroup; path = Shared; sourceTree = "<group>"; children = (B10000000000000000000004, B10000000000000000000005, B10000000000000000000006, B1000000000000000000000D, ); };
 		F20000000000000000000004 /* Widget */ = {isa = PBXGroup; path = Widget; sourceTree = "<group>"; children = (B10000000000000000000008, B1000000000000000000000C, ); };
 		F20000000000000000000005 /* Resources */ = {isa = PBXGroup; path = Resources; sourceTree = "<group>"; children = (B10000000000000000000007, ); };
@@ -133,7 +135,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D30000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A1000000000000000000000E, A10000000000000000000010, A10000000000000000000011, A10000000000000000000012, ); runOnlyForDeploymentPostprocessing = 0; };
+		D30000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A1000000000000000000000E, A10000000000000000000010, A10000000000000000000011, A10000000000000000000012, A10000000000000000000013, ); runOnlyForDeploymentPostprocessing = 0; };
 		D30000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000008, A10000000000000000000009, A1000000000000000000000A, A1000000000000000000000B, A1000000000000000000000F, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 

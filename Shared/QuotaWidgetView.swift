@@ -193,6 +193,9 @@ public struct LiquidGlassSurface: View {
     let isLight: Bool
     let opacity: Double
     let accent: Color
+    let cornerRadius: Double
+    let edgeStrength: Double
+    let tone: Color
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -200,26 +203,37 @@ public struct LiquidGlassSurface: View {
     private var darkFilmOpacity: Double { WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity) }
     private var darkGlassTintOpacity: Double { WidgetGlassOpacity.darkGlassTintOpacity(resolvedOpacity) }
 
-    public init(isLight: Bool, opacity: Double, accent: Color) {
+    public init(
+        isLight: Bool,
+        opacity: Double,
+        accent: Color,
+        cornerRadius: Double = 30,
+        edgeStrength: Double = 0.55,
+        tone: Color = .clear
+    ) {
         self.isLight = isLight
         self.opacity = opacity
         self.accent = accent
+        self.cornerRadius = min(40, max(20, cornerRadius))
+        self.edgeStrength = min(1, max(0, edgeStrength))
+        self.tone = tone
     }
 
     public var body: some View {
+        let shape = RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
         surfaceLayer
+            .overlay { shape.fill(tone.opacity(0.025 + edgeStrength * 0.055)) }
             .overlay {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(outerBorder, lineWidth: 0.8)
+                shape
+                    .strokeBorder(outerBorder, lineWidth: CGFloat(0.65 + edgeStrength * 0.45))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .inset(by: 1)
+                        shape.inset(by: 1)
                             .strokeBorder(innerBorder, lineWidth: 0.5)
                     }
             }
             .overlay(alignment: .top) {
                 Capsule()
-                    .fill(.white.opacity(isLight ? 0.66 : 0.18))
+                    .fill(.white.opacity((isLight ? 0.42 : 0.08) + edgeStrength * 0.24))
                     .frame(height: 0.75)
                     .padding(.horizontal, 36)
                     .padding(.top, 1)
@@ -229,7 +243,7 @@ public struct LiquidGlassSurface: View {
     @ViewBuilder
     private var surfaceLayer: some View {
         if isLight {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
+            RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
                 .fill(Color(red: 0.93, green: 0.96, blue: 1).opacity(resolvedOpacity))
         } else {
             darkSurface
@@ -240,14 +254,14 @@ public struct LiquidGlassSurface: View {
     private var darkSurface: some View {
 #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
+            RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
                 .fill(.clear)
                 .glassEffect(
                     .clear.tint(.black.opacity(darkGlassTintOpacity)),
-                    in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
                         .fill(.black.opacity(darkFilmOpacity))
                 }
         } else {
@@ -259,12 +273,12 @@ public struct LiquidGlassSurface: View {
     }
 
     private var fallbackDarkSurface: some View {
-        RoundedRectangle(cornerRadius: 30, style: .continuous)
+        RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
             .fill(.black.opacity(resolvedOpacity))
     }
 
     private var outerBorder: Color {
-        isLight ? .white.opacity(0.9) : .white.opacity(0.22)
+        isLight ? .white.opacity(0.48 + edgeStrength * 0.42) : .white.opacity(0.12 + edgeStrength * 0.22)
     }
 
     private var innerBorder: Color {

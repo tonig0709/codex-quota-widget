@@ -3,19 +3,29 @@ import SwiftUI
 struct DashboardView: View {
     @ObservedObject var server: CodexAppServer
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
+    @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
+    @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
+    @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
+    @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
+    @State private var showsGlassInspector = true
 
     var body: some View {
         VStack(spacing: 20) {
-            QuotaWidgetView(snapshot: server.snapshot)
+            QuotaWidgetView(snapshot: previewSnapshot, glassOpacity: glassOpacity)
                 .frame(width: 680, height: 300)
                 .background {
                     LiquidGlassSurface(
-                        isLight: server.snapshot.resolvedAppearance == .light,
-                        opacity: WidgetGlassOpacity.defaultValue,
-                        accent: .blue
+                        isLight: isLight,
+                        opacity: glassOpacity,
+                        accent: .blue,
+                        cornerRadius: cornerRadius,
+                        edgeStrength: edgeStrength,
+                        tone: glassTone.color
                     )
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous))
 
             HStack(spacing: 12) {
                 Label(statusText, systemImage: statusIcon)
@@ -23,17 +33,11 @@ struct DashboardView: View {
                     .font(.callout.weight(.medium))
                 Spacer()
 
-                Picker("外观", selection: appearance) {
-                    ForEach(WidgetAppearance.allCases) { appearance in
-                        Text(appearance.title).tag(appearance)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 132)
-
                 Button("修复小组件") { WidgetRepairService.repair() }
                     .help("重新登记并刷新桌面小组件")
+                Button("玻璃设置", systemImage: "slider.horizontal.3") {
+                    showsGlassInspector.toggle()
+                }
                 Button("桌面玻璃面板") {
                     openWindow(id: DesktopGlassPanelView.windowID)
                 }
@@ -51,14 +55,30 @@ struct DashboardView: View {
         }
         .padding(24)
         .frame(minWidth: 730, minHeight: 400)
+        .inspector(isPresented: $showsGlassInspector) {
+            GlassSettingsView(compact: false)
+                .padding(20)
+                .inspectorColumnWidth(min: 260, ideal: 300, max: 340)
+        }
         .task { server.connect() }
     }
 
-    private var appearance: Binding<WidgetAppearance> {
-        Binding(
-            get: { server.snapshot.resolvedAppearance },
-            set: { server.setAppearance($0) }
-        )
+    private var appearanceMode: GlassAppearanceMode {
+        GlassAppearanceMode(rawValue: appearanceRaw) ?? .dark
+    }
+
+    private var glassTone: GlassTone {
+        GlassTone(rawValue: toneRaw) ?? .neutral
+    }
+
+    private var isLight: Bool {
+        appearanceMode.isLight(in: colorScheme)
+    }
+
+    private var previewSnapshot: UsageSnapshot {
+        var value = server.snapshot
+        value.appearance = isLight ? .light : .dark
+        return value
     }
 
     private var statusText: String {

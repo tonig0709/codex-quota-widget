@@ -6,14 +6,18 @@ struct DesktopGlassPanelView: View {
     static let windowID = "desktop-glass-panel"
 
     @ObservedObject var server: CodexAppServer
-    @AppStorage("desktopPanelUseLightAppearance") private var useLightAppearance = false
-    @AppStorage("desktopPanelGlassOpacity") private var glassOpacity = WidgetGlassOpacity.defaultValue
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
+    @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
+    @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
+    @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
+    @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
     @State private var showsControls = false
     @Environment(\.dismissWindow) private var dismissWindow
 
     private var panelSnapshot: UsageSnapshot {
         var value = server.snapshot
-        value.appearance = useLightAppearance ? .light : .dark
+        value.appearance = isLight ? .light : .dark
         return value
     }
 
@@ -22,12 +26,15 @@ struct DesktopGlassPanelView: View {
             .frame(width: 680, height: 300)
             .background {
                 DesktopGlassSurface(
-                    isLight: useLightAppearance,
+                    isLight: isLight,
                     opacity: glassOpacity,
-                    accent: .blue
+                    accent: .blue,
+                    cornerRadius: cornerRadius,
+                    edgeStrength: edgeStrength,
+                    tone: glassTone.color
                 )
             }
-            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous))
             .overlay(alignment: .bottomTrailing) {
                 Button {
                     showsControls.toggle()
@@ -37,7 +44,7 @@ struct DesktopGlassPanelView: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(useLightAppearance ? .black.opacity(0.62) : .white.opacity(0.72))
+                .foregroundStyle(isLight ? .black.opacity(0.62) : .white.opacity(0.72))
                 .background(.thinMaterial, in: Circle())
                 .padding(12)
                 .help("调整桌面玻璃面板")
@@ -53,27 +60,7 @@ struct DesktopGlassPanelView: View {
             Text("桌面玻璃面板")
                 .font(.headline)
 
-            Picker("外观", selection: $useLightAppearance) {
-                Text("深色").tag(false)
-                Text("浅色").tag(true)
-            }
-            .pickerStyle(.segmented)
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("玻璃不透明度")
-                    Spacer()
-                    Text(glassOpacity, format: .percent.precision(.fractionLength(0)))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-                Slider(
-                    value: $glassOpacity,
-                    in: WidgetGlassOpacity.minimum...WidgetGlassOpacity.maximum
-                )
-                .accessibilityLabel("玻璃不透明度")
-                .accessibilityValue(glassOpacity.formatted(.percent.precision(.fractionLength(0))))
-            }
+            GlassSettingsView(compact: true)
 
             HStack {
                 Button("立即刷新") { server.refresh() }
@@ -84,7 +71,19 @@ struct DesktopGlassPanelView: View {
             }
         }
         .padding(16)
-        .frame(width: 280)
+        .frame(width: 300)
+    }
+
+    private var appearanceMode: GlassAppearanceMode {
+        GlassAppearanceMode(rawValue: appearanceRaw) ?? .dark
+    }
+
+    private var glassTone: GlassTone {
+        GlassTone(rawValue: toneRaw) ?? .neutral
+    }
+
+    private var isLight: Bool {
+        appearanceMode.isLight(in: colorScheme)
     }
 }
 
@@ -92,6 +91,9 @@ private struct DesktopGlassSurface: View {
     let isLight: Bool
     let opacity: Double
     let accent: Color
+    let cornerRadius: Double
+    let edgeStrength: Double
+    let tone: Color
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -107,23 +109,28 @@ private struct DesktopGlassSurface: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
         DesktopVisualEffectView(isLight: isLight)
             .overlay {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill((isLight ? Color.white : Color.black).opacity(filmOpacity))
+                shape.fill((isLight ? Color.white : Color.black).opacity(filmOpacity))
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(isLight ? .white.opacity(0.78) : .white.opacity(0.24), lineWidth: 0.8)
+                shape.fill(tone.opacity(0.025 + edgeStrength * 0.055))
+            }
+            .overlay {
+                shape
+                    .strokeBorder(
+                        isLight ? .white.opacity(0.48 + edgeStrength * 0.42) : .white.opacity(0.12 + edgeStrength * 0.22),
+                        lineWidth: CGFloat(0.65 + edgeStrength * 0.45)
+                    )
                     .overlay {
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .inset(by: 1)
+                        shape.inset(by: 1)
                             .strokeBorder(isLight ? accent.opacity(0.18) : .white.opacity(0.09), lineWidth: 0.5)
                     }
             }
             .overlay(alignment: .top) {
                 Capsule()
-                    .fill(.white.opacity(isLight ? 0.7 : 0.2))
+                    .fill(.white.opacity((isLight ? 0.46 : 0.1) + edgeStrength * 0.24))
                     .frame(height: 0.75)
                     .padding(.horizontal, 36)
                     .padding(.top, 1)
