@@ -108,29 +108,47 @@ private struct DesktopGlassSurface: View {
         return WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)
     }
 
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
+    }
+
+    private var filmColor: Color {
+        (isLight ? Color.white : Color.black).opacity(filmOpacity)
+    }
+
+    private var outerBorder: Color {
+        isLight
+            ? .white.opacity(0.48 + edgeStrength * 0.42)
+            : .white.opacity(0.12 + edgeStrength * 0.22)
+    }
+
+    private var innerBorder: Color {
+        isLight ? accent.opacity(0.18) : .white.opacity(0.09)
+    }
+
+    private var borderWidth: CGFloat {
+        CGFloat(0.65 + edgeStrength * 0.45)
+    }
+
+    private var highlightOpacity: Double {
+        (isLight ? 0.46 : 0.1) + edgeStrength * 0.24
+    }
+
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
         DesktopVisualEffectView(isLight: isLight)
-            .overlay {
-                shape.fill((isLight ? Color.white : Color.black).opacity(filmOpacity))
-            }
-            .overlay {
-                shape.fill(tone.opacity(0.025 + edgeStrength * 0.055))
-            }
+            .overlay { shape.fill(filmColor) }
+            .overlay { shape.fill(tone.opacity(0.025 + edgeStrength * 0.055)) }
             .overlay {
                 shape
-                    .strokeBorder(
-                        isLight ? .white.opacity(0.48 + edgeStrength * 0.42) : .white.opacity(0.12 + edgeStrength * 0.22),
-                        lineWidth: CGFloat(0.65 + edgeStrength * 0.45)
-                    )
+                    .strokeBorder(outerBorder, lineWidth: borderWidth)
                     .overlay {
                         shape.inset(by: 1)
-                            .strokeBorder(isLight ? accent.opacity(0.18) : .white.opacity(0.09), lineWidth: 0.5)
+                            .strokeBorder(innerBorder, lineWidth: 0.5)
                     }
             }
             .overlay(alignment: .top) {
                 Capsule()
-                    .fill(.white.opacity((isLight ? 0.46 : 0.1) + edgeStrength * 0.24))
+                    .fill(.white.opacity(highlightOpacity))
                     .frame(height: 0.75)
                     .padding(.horizontal, 36)
                     .padding(.top, 1)
