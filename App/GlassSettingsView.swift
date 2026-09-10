@@ -4,6 +4,7 @@ enum GlassSettingKeys {
     static let appearance = "glassAppearanceMode"
     static let opacity = "desktopPanelGlassOpacity"
     static let edgeStrength = "glassEdgeStrength"
+    static let elasticity = "glassElasticity"
     static let cornerRadius = "glassCornerRadius"
     static let tone = "glassTone"
 }
@@ -69,6 +70,7 @@ struct GlassSettingsView: View {
     @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
     @AppStorage(GlassSettingKeys.opacity) private var opacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
+    @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.10
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
     @State private var showsAdvanced = false
@@ -84,8 +86,9 @@ struct GlassSettingsView: View {
             }
 
             Picker("预设", selection: preset) {
-                ForEach([GlassPreset.clear, .standard, .vivid]) { preset in
+                ForEach(GlassPreset.allCases) { preset in
                     Text(preset.title).tag(preset)
+                        .disabled(preset == .custom)
                 }
             }
             .pickerStyle(.segmented)
@@ -99,6 +102,7 @@ struct GlassSettingsView: View {
 
             slider("不透明度", value: $opacity, range: WidgetGlassOpacity.minimum...WidgetGlassOpacity.maximum, percent: true)
             slider("边缘强度", value: $edgeStrength, range: 0...1, percent: true)
+            slider("弹性", value: $elasticity, range: 0...0.25, percent: true)
 
             DisclosureGroup("高级设置", isExpanded: $showsAdvanced) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -162,18 +166,19 @@ struct GlassSettingsView: View {
     private var preset: Binding<GlassPreset> {
         Binding(
             get: {
-                if matches(opacity: 0.35, edge: 0.42, radius: 30, tone: .neutral) { return .clear }
-                if matches(opacity: 0.86, edge: 0.55, radius: 30, tone: .neutral) { return .standard }
-                if matches(opacity: 0.72, edge: 0.9, radius: 32, tone: .cool) { return .vivid }
+                if matches(opacity: 0.35, edge: 0.42, elasticity: 0.06, radius: 30, tone: .neutral) { return .clear }
+                if matches(opacity: 0.86, edge: 0.55, elasticity: 0.10, radius: 30, tone: .neutral) { return .standard }
+                if matches(opacity: 0.72, edge: 0.9, elasticity: 0.18, radius: 32, tone: .cool) { return .vivid }
                 return .custom
             },
             set: { apply($0) }
         )
     }
 
-    private func matches(opacity expectedOpacity: Double, edge: Double, radius: Double, tone: GlassTone) -> Bool {
+    private func matches(opacity expectedOpacity: Double, edge: Double, elasticity expectedElasticity: Double, radius: Double, tone: GlassTone) -> Bool {
         abs(opacity - expectedOpacity) < 0.005 &&
             abs(edgeStrength - edge) < 0.005 &&
+            abs(elasticity - expectedElasticity) < 0.005 &&
             abs(cornerRadius - radius) < 0.005 &&
             toneRaw == tone.rawValue
     }
@@ -183,16 +188,19 @@ struct GlassSettingsView: View {
         case .clear:
             opacity = 0.35
             edgeStrength = 0.42
+            elasticity = 0.06
             cornerRadius = 30
             toneRaw = GlassTone.neutral.rawValue
         case .standard:
             opacity = 0.86
             edgeStrength = 0.55
+            elasticity = 0.10
             cornerRadius = 30
             toneRaw = GlassTone.neutral.rawValue
         case .vivid:
             opacity = 0.72
             edgeStrength = 0.9
+            elasticity = 0.18
             cornerRadius = 32
             toneRaw = GlassTone.cool.rawValue
         case .custom:

@@ -10,9 +10,13 @@ struct DesktopGlassPanelView: View {
     @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
     @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
+    @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.10
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
     @State private var showsControls = false
+    @State private var hoverVector = CGSize.zero
+    @State private var isHovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismissWindow) private var dismissWindow
 
     private var panelSnapshot: UsageSnapshot {
@@ -31,7 +35,10 @@ struct DesktopGlassPanelView: View {
                     accent: .blue,
                     cornerRadius: cornerRadius,
                     edgeStrength: edgeStrength,
-                    tone: glassTone.color
+                    tone: glassTone.color,
+                    elasticity: elasticity,
+                    hoverVector: hoverVector,
+                    isHovering: isHovering
                 )
             }
             .clipShape(RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous))
@@ -52,6 +59,7 @@ struct DesktopGlassPanelView: View {
                     controls
                 }
             }
+            .onContinuousHover(perform: updateHover)
             .background(DesktopPanelWindowConfigurator())
     }
 
@@ -85,6 +93,26 @@ struct DesktopGlassPanelView: View {
     private var isLight: Bool {
         appearanceMode.isLight(in: colorScheme)
     }
+
+    private func updateHover(_ phase: ContinuousHoverPhase) {
+        switch phase {
+        case .active(let location):
+            isHovering = true
+            hoverVector = CGSize(
+                width: min(1, max(-1, location.x / 340 - 1)),
+                height: min(1, max(-1, location.y / 150 - 1))
+            )
+        case .ended:
+            isHovering = false
+            if reduceMotion {
+                hoverVector = .zero
+            } else {
+                withAnimation(.spring(response: 0.35, dampingFraction: 1)) {
+                    hoverVector = .zero
+                }
+            }
+        }
+    }
 }
 
 private struct DesktopGlassSurface: View {
@@ -94,8 +122,12 @@ private struct DesktopGlassSurface: View {
     let cornerRadius: Double
     let edgeStrength: Double
     let tone: Color
+    let elasticity: Double
+    let hoverVector: CGSize
+    let isHovering: Bool
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var resolvedOpacity: Double {
         reduceTransparency ? 1 : WidgetGlassOpacity.clamped(opacity)
@@ -134,6 +166,32 @@ private struct DesktopGlassSurface: View {
         (isLight ? 0.46 : 0.1) + edgeStrength * 0.24
     }
 
+    private var highlightCenter: UnitPoint {
+        UnitPoint(
+            x: min(1, max(0, 0.5 + hoverVector.width * 0.5)),
+            y: min(1, max(0, 0.5 + hoverVector.height * 0.5))
+        )
+    }
+
+    private var motionStrength: CGFloat {
+        reduceMotion ? 0 : CGFloat(min(0.25, max(0, elasticity)))
+    }
+
+    private var directionalHighlight: some View {
+        shape
+            .strokeBorder(
+                RadialGradient(
+                    colors: [.white.opacity(isLight ? 0.92 : 0.56), .clear],
+                    center: highlightCenter,
+                    startRadius: 0,
+                    endRadius: 180
+                ),
+                lineWidth: CGFloat(1.2 + edgeStrength * 1.8)
+            )
+            .opacity(isHovering ? 1 : 0)
+            .animation(.easeOut(duration: 0.16), value: isHovering)
+    }
+
     var body: some View {
         DesktopVisualEffectView(isLight: isLight)
             .overlay { shape.fill(filmColor) }
@@ -153,6 +211,15 @@ private struct DesktopGlassSurface: View {
                     .padding(.horizontal, 36)
                     .padding(.top, 1)
             }
+            .overlay { directionalHighlight }
+            .scaleEffect(
+                x: 1 + abs(hoverVector.width) * motionStrength * 0.02,
+                y: 1 + abs(hoverVector.height) * motionStrength * 0.02
+            )
+            .offset(
+                x: hoverVector.width * motionStrength * 8,
+                y: hoverVector.height * motionStrength * 6
+            )
     }
 }
 
