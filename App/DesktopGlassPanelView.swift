@@ -94,7 +94,7 @@ struct DesktopGlassPanelView: View {
         appearanceMode.isLight(in: colorScheme)
     }
 
-    private func updateHover(_ phase: ContinuousHoverPhase) {
+    private func updateHover(_ phase: HoverPhase) {
         switch phase {
         case .active(let location):
             isHovering = true
