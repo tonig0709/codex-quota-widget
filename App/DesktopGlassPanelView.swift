@@ -11,6 +11,7 @@ struct DesktopGlassPanelView: View {
     @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
     @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.10
+    @AppStorage(GlassSettingKeys.dispersion) private var dispersion = 0.08
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
     @State private var showsControls = false
@@ -36,6 +37,7 @@ struct DesktopGlassPanelView: View {
                     cornerRadius: cornerRadius,
                     edgeStrength: edgeStrength,
                     tone: glassTone.color,
+                    dispersion: dispersion,
                     elasticity: elasticity,
                     hoverVector: hoverVector,
                     isHovering: isHovering
@@ -122,6 +124,7 @@ private struct DesktopGlassSurface: View {
     let cornerRadius: Double
     let edgeStrength: Double
     let tone: Color
+    let dispersion: Double
     let elasticity: Double
     let hoverVector: CGSize
     let isHovering: Bool
@@ -192,6 +195,19 @@ private struct DesktopGlassSurface: View {
             .animation(.easeOut(duration: 0.16), value: isHovering)
     }
 
+    private var chromaticEdge: some View {
+        let resolvedDispersion = min(0.30, max(0, dispersion))
+        let offset = CGFloat(resolvedDispersion * 3)
+        return ZStack {
+            shape
+                .strokeBorder(.red.opacity(resolvedDispersion * 0.18), lineWidth: 0.65)
+                .offset(x: -offset)
+            shape
+                .strokeBorder(.cyan.opacity(resolvedDispersion * 0.18), lineWidth: 0.65)
+                .offset(x: offset)
+        }
+    }
+
     var body: some View {
         DesktopVisualEffectView(isLight: isLight)
             .overlay { shape.fill(filmColor) }
@@ -212,6 +228,7 @@ private struct DesktopGlassSurface: View {
                     .padding(.top, 1)
             }
             .overlay { directionalHighlight }
+            .overlay { chromaticEdge }
             .scaleEffect(
                 x: 1 + abs(hoverVector.width) * motionStrength * 0.02,
                 y: 1 + abs(hoverVector.height) * motionStrength * 0.02

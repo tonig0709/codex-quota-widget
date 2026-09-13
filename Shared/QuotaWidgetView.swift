@@ -196,6 +196,7 @@ public struct LiquidGlassSurface: View {
     let cornerRadius: Double
     let edgeStrength: Double
     let tone: Color
+    let dispersion: Double
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -209,7 +210,8 @@ public struct LiquidGlassSurface: View {
         accent: Color,
         cornerRadius: Double = 30,
         edgeStrength: Double = 0.55,
-        tone: Color = .clear
+        tone: Color = .clear,
+        dispersion: Double = 0
     ) {
         self.isLight = isLight
         self.opacity = opacity
@@ -217,6 +219,7 @@ public struct LiquidGlassSurface: View {
         self.cornerRadius = min(40, max(20, cornerRadius))
         self.edgeStrength = min(1, max(0, edgeStrength))
         self.tone = tone
+        self.dispersion = min(0.30, max(0, dispersion))
     }
 
     public var body: some View {
@@ -238,6 +241,7 @@ public struct LiquidGlassSurface: View {
                     .padding(.horizontal, 36)
                     .padding(.top, 1)
             }
+            .overlay { chromaticEdge(shape: shape) }
     }
 
     @ViewBuilder
@@ -283,5 +287,17 @@ public struct LiquidGlassSurface: View {
 
     private var innerBorder: Color {
         isLight ? accent.opacity(0.16) : .white.opacity(0.08)
+    }
+
+    private func chromaticEdge(shape: RoundedRectangle) -> some View {
+        let offset = CGFloat(dispersion * 3)
+        return ZStack {
+            shape
+                .strokeBorder(.red.opacity(dispersion * 0.18), lineWidth: 0.65)
+                .offset(x: -offset)
+            shape
+                .strokeBorder(.cyan.opacity(dispersion * 0.18), lineWidth: 0.65)
+                .offset(x: offset)
+        }
     }
 }

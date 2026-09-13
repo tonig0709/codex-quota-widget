@@ -7,6 +7,7 @@ struct DashboardView: View {
     @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
     @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
+    @AppStorage(GlassSettingKeys.dispersion) private var dispersion = 0.08
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
     @State private var showsGlassInspector = true
@@ -22,7 +23,8 @@ struct DashboardView: View {
                         accent: .blue,
                         cornerRadius: cornerRadius,
                         edgeStrength: edgeStrength,
-                        tone: glassTone.color
+                        tone: glassTone.color,
+                        dispersion: dispersion
                     )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous))

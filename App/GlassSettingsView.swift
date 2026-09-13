@@ -5,6 +5,7 @@ enum GlassSettingKeys {
     static let opacity = "desktopPanelGlassOpacity"
     static let edgeStrength = "glassEdgeStrength"
     static let elasticity = "glassElasticity"
+    static let dispersion = "glassDispersion"
     static let cornerRadius = "glassCornerRadius"
     static let tone = "glassTone"
 }
@@ -71,6 +72,7 @@ struct GlassSettingsView: View {
     @AppStorage(GlassSettingKeys.opacity) private var opacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
     @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.10
+    @AppStorage(GlassSettingKeys.dispersion) private var dispersion = 0.08
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
     @State private var showsAdvanced = false
@@ -80,7 +82,7 @@ struct GlassSettingsView: View {
             if !compact {
                 Text("玻璃外观")
                     .font(.title3.weight(.semibold))
-                Text("所有调整都会立即反映在预览与桌面面板中。")
+                Text("外观调整会立即反映在预览中；弹性用于桌面面板。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -107,6 +109,7 @@ struct GlassSettingsView: View {
             DisclosureGroup("高级设置", isExpanded: $showsAdvanced) {
                 VStack(alignment: .leading, spacing: 14) {
                     slider("圆角", value: $cornerRadius, range: 20...40, percent: false)
+                    slider("色散", value: $dispersion, range: 0...0.30, percent: true)
 
                     Picker("玻璃色调", selection: tone) {
                         ForEach(GlassTone.allCases) { tone in
@@ -166,19 +169,20 @@ struct GlassSettingsView: View {
     private var preset: Binding<GlassPreset> {
         Binding(
             get: {
-                if matches(opacity: 0.35, edge: 0.42, elasticity: 0.06, radius: 30, tone: .neutral) { return .clear }
-                if matches(opacity: 0.86, edge: 0.55, elasticity: 0.10, radius: 30, tone: .neutral) { return .standard }
-                if matches(opacity: 0.72, edge: 0.9, elasticity: 0.18, radius: 32, tone: .cool) { return .vivid }
+                if matches(opacity: 0.35, edge: 0.42, elasticity: 0.06, dispersion: 0.03, radius: 30, tone: .neutral) { return .clear }
+                if matches(opacity: 0.86, edge: 0.55, elasticity: 0.10, dispersion: 0.08, radius: 30, tone: .neutral) { return .standard }
+                if matches(opacity: 0.72, edge: 0.9, elasticity: 0.18, dispersion: 0.18, radius: 32, tone: .cool) { return .vivid }
                 return .custom
             },
             set: { apply($0) }
         )
     }
 
-    private func matches(opacity expectedOpacity: Double, edge: Double, elasticity expectedElasticity: Double, radius: Double, tone: GlassTone) -> Bool {
+    private func matches(opacity expectedOpacity: Double, edge: Double, elasticity expectedElasticity: Double, dispersion expectedDispersion: Double, radius: Double, tone: GlassTone) -> Bool {
         abs(opacity - expectedOpacity) < 0.005 &&
             abs(edgeStrength - edge) < 0.005 &&
             abs(elasticity - expectedElasticity) < 0.005 &&
+            abs(dispersion - expectedDispersion) < 0.005 &&
             abs(cornerRadius - radius) < 0.005 &&
             toneRaw == tone.rawValue
     }
@@ -189,18 +193,21 @@ struct GlassSettingsView: View {
             opacity = 0.35
             edgeStrength = 0.42
             elasticity = 0.06
+            dispersion = 0.03
             cornerRadius = 30
             toneRaw = GlassTone.neutral.rawValue
         case .standard:
             opacity = 0.86
             edgeStrength = 0.55
             elasticity = 0.10
+            dispersion = 0.08
             cornerRadius = 30
             toneRaw = GlassTone.neutral.rawValue
         case .vivid:
             opacity = 0.72
             edgeStrength = 0.9
             elasticity = 0.18
+            dispersion = 0.18
             cornerRadius = 32
             toneRaw = GlassTone.cool.rawValue
         case .custom:

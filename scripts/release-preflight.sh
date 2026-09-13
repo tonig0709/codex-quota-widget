@@ -191,6 +191,8 @@ require_text 'GlassSettingsView(compact: true)' App/DesktopGlassPanelView.swift 
 require_text '.onContinuousHover(perform: updateHover)' App/DesktopGlassPanelView.swift "desktop glass lacks pointer-following feedback"
 require_text 'accessibilityReduceMotion' App/DesktopGlassPanelView.swift "desktop glass motion lacks reduced-motion fallback"
 require_text 'GlassSettingKeys.elasticity' App/DesktopGlassPanelView.swift "desktop glass does not apply its elasticity setting"
+require_text 'GlassSettingKeys.dispersion' App/DesktopGlassPanelView.swift "desktop glass does not apply its dispersion setting"
+require_text 'glass dispersion setting has no visible render effect' Checks/main.swift "glass dispersion lacks a render regression"
 require_text 'AppearanceV5ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the crash-safe V5 appearance intent"
 require_text 'controlStyle: .field' Shared/AppearanceV3ConfigurationIntent.swift "safe opacity field is missing"
 forbid_text 'struct AppearanceV4ConfigurationIntent' Shared/AppearanceV3ConfigurationIntent.swift "crash-prone V4 slider intent is still shipped"

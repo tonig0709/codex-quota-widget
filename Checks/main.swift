@@ -211,6 +211,21 @@ await MainActor.run {
     precondition(!hasReadableContrast(solidSmall, in: fullFrame), "solid-black small-widget negative control passed")
     precondition(!hasReadableContrast(solidLarge, in: fullFrame), "solid-black large-widget negative control passed")
 
+    let plainEdge = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, dispersion: 0),
+        width: 240,
+        height: 120
+    )
+    let dispersedEdge = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, dispersion: 0.3),
+        width: 240,
+        height: 120
+    )
+    precondition(
+        changedPixels(plainEdge, dispersedEdge, in: fullFrame) > 20,
+        "glass dispersion setting has no visible render effect"
+    )
+
 }
 #endif
 
