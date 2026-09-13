@@ -354,6 +354,8 @@ translocated_pid=""
 hdiutil detach "$translocation_mount" >/dev/null ||
     fail "translocated DMG remained mounted after its app terminated"
 translocation_mount=""
+/usr/bin/pluginkit -r "$widget" >/dev/null 2>&1 || true
+wait_for_empty_registry || fail "non-installed candidate remained registered after the inert-copy probe"
 pass "DMG/build copies do not run registration repair or occupy the live snapshot port"
 
 section "Widget self-registration fault injection"
