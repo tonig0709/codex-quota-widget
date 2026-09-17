@@ -193,6 +193,12 @@ require_text 'accessibilityReduceMotion' App/DesktopGlassPanelView.swift "deskto
 require_text 'GlassSettingKeys.elasticity' App/DesktopGlassPanelView.swift "desktop glass does not apply its elasticity setting"
 require_text 'GlassSettingKeys.dispersion' App/DesktopGlassPanelView.swift "desktop glass does not apply its dispersion setting"
 require_text 'glass dispersion setting has no visible render effect' Checks/main.swift "glass dispersion lacks a render regression"
+require_text 'glass corner-radius setting has no visible render effect' Checks/main.swift "glass corner radius lacks a render regression"
+require_text 'glass elasticity and displacement settings have no visible render effect' Checks/main.swift "glass elasticity lacks a render regression"
+require_text 'glass settings did not survive the app-to-widget snapshot round trip' Checks/main.swift "app-to-widget glass settings sync lacks a regression"
+require_text 'updateGlassSettings' App/CodexAppServer.swift "app does not persist glass settings for widgets"
+require_text 'glassReloadWorkItem?.cancel()' App/CodexAppServer.swift "glass slider updates are not coalesced to the final widget value"
+require_text 'snapshot.glassSettings' Widget/CodexQuotaWidget.swift "widget ignores app glass settings"
 require_text 'AppearanceV5ConfigurationIntent.self' Widget/CodexQuotaWidget.swift "widgets do not use the crash-safe V5 appearance intent"
 require_text 'controlStyle: .field' Shared/AppearanceV3ConfigurationIntent.swift "safe opacity field is missing"
 forbid_text 'struct AppearanceV4ConfigurationIntent' Shared/AppearanceV3ConfigurationIntent.swift "crash-prone V4 slider intent is still shipped"
@@ -530,7 +536,7 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     snapshot = json.load(handle)
 
-required = {"fiveHour", "weekly", "appearance", "dailyUsage", "updatedAt"}
+required = {"fiveHour", "weekly", "appearance", "glassSettings", "dailyUsage", "updatedAt"}
 missing = sorted(required.difference(snapshot))
 if missing:
     raise SystemExit(f"snapshot missing fields: {', '.join(missing)}")

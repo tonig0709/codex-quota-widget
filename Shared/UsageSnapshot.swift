@@ -7,6 +7,73 @@ public enum WidgetAppearance: String, Codable, CaseIterable, Identifiable, Senda
     public var title: String { self == .dark ? "深色" : "浅色" }
 }
 
+public enum GlassRefractionMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    case standard, polar, prominent
+
+    public var id: Self { self }
+}
+
+/// A target-neutral description of the glass surface. The app persists this
+/// alongside the quota snapshot so an already-placed WidgetKit instance reads
+/// the same values without relying on process-local UserDefaults.
+public struct GlassRenderSettings: Codable, Equatable, Sendable {
+    public var appearance: WidgetAppearance
+    public var opacity: Double
+    public var edgeStrength: Double
+    public var elasticity: Double
+    public var displacement: Double
+    public var blurAmount: Double
+    public var saturation: Double
+    public var dispersion: Double
+    public var cornerRadius: Double
+    public var tone: String
+    public var refractionMode: GlassRefractionMode
+
+    public init(
+        appearance: WidgetAppearance = .dark,
+        opacity: Double = WidgetGlassOpacity.defaultValue,
+        edgeStrength: Double = 0.55,
+        elasticity: Double = 0.15,
+        displacement: Double = 0.35,
+        blurAmount: Double = 0.20,
+        saturation: Double = 1.40,
+        dispersion: Double = 0.08,
+        cornerRadius: Double = 30,
+        tone: String = "neutral",
+        refractionMode: GlassRefractionMode = .standard
+    ) {
+        self.appearance = appearance
+        self.opacity = opacity
+        self.edgeStrength = edgeStrength
+        self.elasticity = elasticity
+        self.displacement = displacement
+        self.blurAmount = blurAmount
+        self.saturation = saturation
+        self.dispersion = dispersion
+        self.cornerRadius = cornerRadius
+        self.tone = tone
+        self.refractionMode = refractionMode
+    }
+
+    public var sanitized: Self {
+        Self(
+            appearance: appearance,
+            opacity: WidgetGlassOpacity.clamped(opacity),
+            edgeStrength: min(1, max(0, edgeStrength)),
+            elasticity: min(1, max(0, elasticity)),
+            displacement: min(1, max(0, displacement)),
+            blurAmount: min(1, max(0, blurAmount)),
+            saturation: min(2.2, max(1, saturation)),
+            dispersion: min(0.30, max(0, dispersion)),
+            cornerRadius: min(64, max(10, cornerRadius)),
+            tone: ["cool", "neutral", "warm"].contains(tone) ? tone : "neutral",
+            refractionMode: refractionMode
+        )
+    }
+
+    public static let standard = Self()
+}
+
 public struct UsageWindow: Codable, Equatable, Sendable {
     public var usedPercent: Int
     public var windowDurationMinutes: Int?
@@ -41,6 +108,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
     public var email: String?
     public var plan: String?
     public var appearance: WidgetAppearance?
+    public var glassSettings: GlassRenderSettings?
     public var updatedAt: Date
 
     public init(
@@ -50,6 +118,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
         email: String? = nil,
         plan: String? = nil,
         appearance: WidgetAppearance = .dark,
+        glassSettings: GlassRenderSettings? = nil,
         updatedAt: Date = .now
     ) {
         self.fiveHour = fiveHour
@@ -58,6 +127,7 @@ public struct UsageSnapshot: Codable, Equatable, Sendable {
         self.email = email
         self.plan = plan
         self.appearance = appearance
+        self.glassSettings = glassSettings
         self.updatedAt = updatedAt
     }
 

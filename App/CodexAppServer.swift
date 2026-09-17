@@ -74,7 +74,7 @@ final class CodexAppServer: ObservableObject {
     }
 
     @Published private(set) var state: State = .disconnected
-    @Published private(set) var snapshot = SnapshotStore.load()
+    @Published private(set) var snapshot: UsageSnapshot
 
     private struct PendingRefresh {
         let rateLimitRequestID: Int
@@ -91,10 +91,15 @@ final class CodexAppServer: ObservableObject {
     private var pendingRefresh: PendingRefresh?
     private var refreshQueued = false
     private var refreshTimeout: DispatchWorkItem?
+    private var glassReloadWorkItem: DispatchWorkItem?
     private var nextRequestID = 3
     private let snapshotServer = SnapshotServer()
 
     init() {
+        var initialSnapshot = SnapshotStore.load()
+        initialSnapshot.glassSettings = GlassSettingsSnapshot.load()
+        snapshot = initialSnapshot
+        SnapshotStore.save(initialSnapshot)
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
@@ -219,6 +224,22 @@ final class CodexAppServer: ObservableObject {
         guard snapshot.resolvedAppearance != appearance else { return }
         snapshot.appearance = appearance
         persist(markDataRefresh: false)
+    }
+
+    func updateGlassSettings(_ settings: GlassRenderSettings) {
+        let settings = settings.sanitized
+        guard snapshot.glassSettings != settings else { return }
+        snapshot.glassSettings = settings
+        snapshot.appearance = settings.appearance
+        SnapshotStore.save(snapshot)
+        snapshotServer.start()
+        glassReloadWorkItem?.cancel()
+        let reload = DispatchWorkItem {
+            WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.smallWidgetKind)
+            WidgetCenter.shared.reloadTimelines(ofKind: SnapshotStore.largeWidgetKind)
+        }
+        glassReloadWorkItem = reload
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: reload)
     }
 
     private func consume(_ data: Data) {

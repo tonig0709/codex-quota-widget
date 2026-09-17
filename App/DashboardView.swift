@@ -7,9 +7,14 @@ struct DashboardView: View {
     @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
     @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
+    @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.15
+    @AppStorage(GlassSettingKeys.displacement) private var displacement = 0.35
+    @AppStorage(GlassSettingKeys.blurAmount) private var blurAmount = 0.20
+    @AppStorage(GlassSettingKeys.saturation) private var saturation = 1.40
     @AppStorage(GlassSettingKeys.dispersion) private var dispersion = 0.08
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
+    @AppStorage(GlassSettingKeys.refractionMode) private var refractionModeRaw = GlassRefractionMode.standard.rawValue
     @State private var showsGlassInspector = true
 
     var body: some View {
@@ -24,7 +29,12 @@ struct DashboardView: View {
                         cornerRadius: cornerRadius,
                         edgeStrength: edgeStrength,
                         tone: glassTone.color,
-                        dispersion: dispersion
+                        dispersion: dispersion,
+                        elasticity: elasticity,
+                        displacement: displacement,
+                        blurAmount: blurAmount,
+                        saturation: saturation,
+                        refractionMode: refractionMode
                     )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous))
@@ -58,7 +68,9 @@ struct DashboardView: View {
         .padding(24)
         .frame(minWidth: 730, minHeight: 400)
         .inspector(isPresented: $showsGlassInspector) {
-            GlassSettingsView(compact: false)
+            ScrollView {
+                GlassSettingsView(compact: false, onSettingsChange: server.updateGlassSettings)
+            }
                 .padding(20)
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 340)
         }
@@ -71,6 +83,10 @@ struct DashboardView: View {
 
     private var glassTone: GlassTone {
         GlassTone(rawValue: toneRaw) ?? .neutral
+    }
+
+    private var refractionMode: GlassRefractionMode {
+        GlassRefractionMode(rawValue: refractionModeRaw) ?? .standard
     }
 
     private var isLight: Bool {

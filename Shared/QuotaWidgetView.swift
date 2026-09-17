@@ -197,6 +197,11 @@ public struct LiquidGlassSurface: View {
     let edgeStrength: Double
     let tone: Color
     let dispersion: Double
+    let elasticity: Double
+    let displacement: Double
+    let blurAmount: Double
+    let saturation: Double
+    let refractionMode: GlassRefractionMode
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -211,27 +216,38 @@ public struct LiquidGlassSurface: View {
         cornerRadius: Double = 30,
         edgeStrength: Double = 0.55,
         tone: Color = .clear,
-        dispersion: Double = 0
+        dispersion: Double = 0,
+        elasticity: Double = 0.15,
+        displacement: Double = 0.35,
+        blurAmount: Double = 0.20,
+        saturation: Double = 1.40,
+        refractionMode: GlassRefractionMode = .standard
     ) {
         self.isLight = isLight
         self.opacity = opacity
         self.accent = accent
-        self.cornerRadius = min(40, max(20, cornerRadius))
+        self.cornerRadius = min(64, max(10, cornerRadius))
         self.edgeStrength = min(1, max(0, edgeStrength))
         self.tone = tone
         self.dispersion = min(0.30, max(0, dispersion))
+        self.elasticity = min(1, max(0, elasticity))
+        self.displacement = min(1, max(0, displacement))
+        self.blurAmount = min(1, max(0, blurAmount))
+        self.saturation = min(2.2, max(1, saturation))
+        self.refractionMode = refractionMode
     }
 
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: CGFloat(cornerRadius), style: .continuous)
         surfaceLayer
-            .overlay { shape.fill(tone.opacity(0.025 + edgeStrength * 0.055)) }
+            .overlay { shape.fill(frostColor) }
+            .overlay { shape.fill(tone.opacity(toneOpacity)) }
             .overlay {
                 shape
-                    .strokeBorder(outerBorder, lineWidth: CGFloat(0.65 + edgeStrength * 0.45))
+                    .strokeBorder(outerBorder, lineWidth: rimWidth)
                     .overlay {
-                        shape.inset(by: 1)
-                            .strokeBorder(innerBorder, lineWidth: 0.5)
+                        shape.inset(by: rimInset)
+                            .strokeBorder(innerBorder, lineWidth: innerRimWidth)
                     }
             }
             .overlay(alignment: .top) {
@@ -242,6 +258,7 @@ public struct LiquidGlassSurface: View {
                     .padding(.top, 1)
             }
             .overlay { chromaticEdge(shape: shape) }
+            .overlay { refractionHighlight(shape: shape) }
     }
 
     @ViewBuilder
@@ -286,7 +303,54 @@ public struct LiquidGlassSurface: View {
     }
 
     private var innerBorder: Color {
-        isLight ? accent.opacity(0.16) : .white.opacity(0.08)
+        isLight ? accent.opacity(0.12 + (saturation - 1) * 0.14) : .white.opacity(0.07 + displacement * 0.07)
+    }
+
+    private var rimWidth: CGFloat {
+        CGFloat(0.65 + edgeStrength * 0.75 + displacement * 1.25)
+    }
+
+    private var rimInset: CGFloat { CGFloat(0.8 + displacement * 1.8) }
+    private var innerRimWidth: CGFloat { CGFloat(0.4 + displacement * 0.9) }
+
+    private var frostColor: Color {
+        (isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.18 : 0.10))
+    }
+
+    private var toneOpacity: Double {
+        (0.02 + edgeStrength * 0.04) * saturation
+    }
+
+    @ViewBuilder
+    private func refractionHighlight(shape: RoundedRectangle) -> some View {
+        switch refractionMode {
+        case .standard:
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [.white.opacity(0.08 + displacement * 0.26), .clear, .white.opacity(0.03)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: CGFloat(0.8 + displacement * 1.8 + elasticity * 0.8)
+            )
+        case .polar:
+            shape.strokeBorder(
+                AngularGradient(
+                    colors: [.white.opacity(0.12 + displacement * 0.32), .clear, accent.opacity(0.08 * saturation), .clear, .white.opacity(0.12 + displacement * 0.32)],
+                    center: .center
+                ),
+                lineWidth: CGFloat(1 + displacement * 2.4 + elasticity * 0.8)
+            )
+        case .prominent:
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [.white.opacity(0.18 + displacement * 0.38), accent.opacity(0.08 * saturation), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ),
+                lineWidth: CGFloat(1.4 + displacement * 3.2 + elasticity * 0.8)
+            )
+        }
     }
 
     private func chromaticEdge(shape: RoundedRectangle) -> some View {

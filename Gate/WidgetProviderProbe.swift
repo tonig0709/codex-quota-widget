@@ -16,6 +16,8 @@ struct WidgetProviderProbe {
         precondition(snapshot.dailyUsage.count == dailyCount, "Widget provider returned incomplete trend data")
         precondition(snapshot.dailyUsage.last?.tokens == lastTokens, "Widget provider returned stale trend data")
         precondition(snapshot.email == nil && snapshot.plan == nil, "Widget provider received account identity")
+        precondition(snapshot.glassSettings != nil, "Widget provider did not receive app glass settings")
+        precondition(snapshot.glassSettings?.sanitized == snapshot.glassSettings, "Widget provider received unsafe glass settings")
 
         let fallback = UsageSnapshot(
             fiveHour: UsageWindow(usedPercent: 99, windowDurationMinutes: nil, resetsAt: nil),

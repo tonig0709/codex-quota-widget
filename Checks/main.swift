@@ -226,7 +226,75 @@ await MainActor.run {
         "glass dispersion setting has no visible render effect"
     )
 
+    let tightCorner = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, cornerRadius: 10),
+        width: 240,
+        height: 120
+    )
+    let roundCorner = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, cornerRadius: 64),
+        width: 240,
+        height: 120
+    )
+    precondition(
+        changedPixels(tightCorner, roundCorner, in: fullFrame) > 100,
+        "glass corner-radius setting has no visible render effect"
+    )
+
+    let quietOptics = render(
+        LiquidGlassSurface(
+            isLight: true,
+            opacity: 0.7,
+            accent: .blue,
+            elasticity: 0,
+            displacement: 0,
+            refractionMode: .prominent
+        ),
+        width: 240,
+        height: 120
+    )
+    let expressiveOptics = render(
+        LiquidGlassSurface(
+            isLight: true,
+            opacity: 0.7,
+            accent: .blue,
+            elasticity: 1,
+            displacement: 1,
+            refractionMode: .prominent
+        ),
+        width: 240,
+        height: 120
+    )
+    precondition(
+        changedPixels(quietOptics, expressiveOptics, in: fullFrame) > 100,
+        "glass elasticity and displacement settings have no visible render effect"
+    )
+
 }
 #endif
+
+let settings = GlassRenderSettings(
+    appearance: .light,
+    opacity: 0.51,
+    edgeStrength: 0.73,
+    elasticity: 0.82,
+    displacement: 0.64,
+    blurAmount: 0.29,
+    saturation: 1.72,
+    dispersion: 0.16,
+    cornerRadius: 51,
+    tone: "cool",
+    refractionMode: .polar
+)
+let settingsSnapshot = UsageSnapshot(glassSettings: settings)
+let settingsData = try JSONEncoder().encode(settingsSnapshot)
+let decodedSettings = try JSONDecoder().decode(UsageSnapshot.self, from: settingsData)
+precondition(decodedSettings.glassSettings == settings, "glass settings did not survive the app-to-widget snapshot round trip")
+
+let invalidSettings = GlassRenderSettings(opacity: -1, elasticity: 3, displacement: -2, blurAmount: 9, saturation: 0, cornerRadius: 200, tone: "invalid").sanitized
+precondition(invalidSettings.opacity == WidgetGlassOpacity.minimum, "glass opacity was not clamped")
+precondition(invalidSettings.elasticity == 1 && invalidSettings.displacement == 0, "glass motion inputs were not clamped")
+precondition(invalidSettings.blurAmount == 1 && invalidSettings.saturation == 1, "glass optics inputs were not clamped")
+precondition(invalidSettings.cornerRadius == 64 && invalidSettings.tone == "neutral", "glass shape inputs were not clamped")
 
 print("Quota parser, thresholds, and widget renders passed.")

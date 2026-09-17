@@ -10,10 +10,14 @@ struct DesktopGlassPanelView: View {
     @AppStorage(GlassSettingKeys.appearance) private var appearanceRaw = GlassAppearanceMode.dark.rawValue
     @AppStorage(GlassSettingKeys.opacity) private var glassOpacity = WidgetGlassOpacity.defaultValue
     @AppStorage(GlassSettingKeys.edgeStrength) private var edgeStrength = 0.55
-    @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.10
+    @AppStorage(GlassSettingKeys.elasticity) private var elasticity = 0.15
+    @AppStorage(GlassSettingKeys.displacement) private var displacement = 0.35
+    @AppStorage(GlassSettingKeys.blurAmount) private var blurAmount = 0.20
+    @AppStorage(GlassSettingKeys.saturation) private var saturation = 1.40
     @AppStorage(GlassSettingKeys.dispersion) private var dispersion = 0.08
     @AppStorage(GlassSettingKeys.cornerRadius) private var cornerRadius = 30.0
     @AppStorage(GlassSettingKeys.tone) private var toneRaw = GlassTone.neutral.rawValue
+    @AppStorage(GlassSettingKeys.refractionMode) private var refractionModeRaw = GlassRefractionMode.standard.rawValue
     @State private var showsControls = false
     @State private var hoverVector = CGSize.zero
     @State private var isHovering = false
@@ -39,6 +43,10 @@ struct DesktopGlassPanelView: View {
                     tone: glassTone.color,
                     dispersion: dispersion,
                     elasticity: elasticity,
+                    displacement: displacement,
+                    blurAmount: blurAmount,
+                    saturation: saturation,
+                    refractionMode: refractionMode,
                     hoverVector: hoverVector,
                     isHovering: isHovering
                 )
@@ -70,7 +78,10 @@ struct DesktopGlassPanelView: View {
             Text("桌面玻璃面板")
                 .font(.headline)
 
-            GlassSettingsView(compact: true)
+            ScrollView {
+                GlassSettingsView(compact: true, onSettingsChange: server.updateGlassSettings)
+            }
+            .frame(height: 500)
 
             HStack {
                 Button("立即刷新") { server.refresh() }
@@ -81,7 +92,7 @@ struct DesktopGlassPanelView: View {
             }
         }
         .padding(16)
-        .frame(width: 300)
+        .frame(width: 330)
     }
 
     private var appearanceMode: GlassAppearanceMode {
@@ -90,6 +101,10 @@ struct DesktopGlassPanelView: View {
 
     private var glassTone: GlassTone {
         GlassTone(rawValue: toneRaw) ?? .neutral
+    }
+
+    private var refractionMode: GlassRefractionMode {
+        GlassRefractionMode(rawValue: refractionModeRaw) ?? .standard
     }
 
     private var isLight: Bool {
@@ -126,6 +141,10 @@ private struct DesktopGlassSurface: View {
     let tone: Color
     let dispersion: Double
     let elasticity: Double
+    let displacement: Double
+    let blurAmount: Double
+    let saturation: Double
+    let refractionMode: GlassRefractionMode
     let hoverVector: CGSize
     let isHovering: Bool
 
@@ -162,7 +181,7 @@ private struct DesktopGlassSurface: View {
     }
 
     private var borderWidth: CGFloat {
-        CGFloat(0.65 + edgeStrength * 0.45)
+        CGFloat(0.65 + edgeStrength * 0.75 + displacement * 1.25)
     }
 
     private var highlightOpacity: Double {
@@ -177,22 +196,41 @@ private struct DesktopGlassSurface: View {
     }
 
     private var motionStrength: CGFloat {
-        reduceMotion ? 0 : CGFloat(min(0.25, max(0, elasticity)))
+        reduceMotion ? 0 : CGFloat(min(1, max(0, elasticity)))
+    }
+
+    private var highlightStart: UnitPoint {
+        UnitPoint(x: min(1, max(0, 0.5 - hoverVector.width * 0.5)), y: min(1, max(0, 0.5 - hoverVector.height * 0.5)))
+    }
+
+    private var highlightEnd: UnitPoint {
+        UnitPoint(x: min(1, max(0, 0.5 + hoverVector.width * 0.5)), y: min(1, max(0, 0.5 + hoverVector.height * 0.5)))
     }
 
     private var directionalHighlight: some View {
-        shape
-            .strokeBorder(
+        ZStack {
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [.clear, .white.opacity(isLight ? 0.96 : 0.68), .clear],
+                    startPoint: highlightStart,
+                    endPoint: highlightEnd
+                ),
+                lineWidth: CGFloat(1.4 + edgeStrength * 1.8 + displacement * 2)
+            )
+            .blendMode(.screen)
+            shape.strokeBorder(
                 RadialGradient(
-                    colors: [.white.opacity(isLight ? 0.92 : 0.56), .clear],
+                    colors: [.white.opacity(isLight ? 0.82 : 0.48), .clear],
                     center: highlightCenter,
                     startRadius: 0,
                     endRadius: 180
                 ),
-                lineWidth: CGFloat(1.2 + edgeStrength * 1.8)
+                lineWidth: CGFloat(1 + displacement * 3)
             )
-            .opacity(isHovering ? 1 : 0)
-            .animation(.easeOut(duration: 0.16), value: isHovering)
+            .blendMode(.overlay)
+        }
+        .opacity(isHovering ? 1 : 0)
+        .animation(.easeOut(duration: 0.14), value: isHovering)
     }
 
     private var chromaticEdge: some View {
@@ -211,7 +249,8 @@ private struct DesktopGlassSurface: View {
     var body: some View {
         DesktopVisualEffectView(isLight: isLight)
             .overlay { shape.fill(filmColor) }
-            .overlay { shape.fill(tone.opacity(0.025 + edgeStrength * 0.055)) }
+            .overlay { shape.fill((isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.16 : 0.09))) }
+            .overlay { shape.fill(tone.opacity((0.02 + edgeStrength * 0.045) * saturation)) }
             .overlay {
                 shape
                     .strokeBorder(outerBorder, lineWidth: borderWidth)
@@ -228,15 +267,37 @@ private struct DesktopGlassSurface: View {
                     .padding(.top, 1)
             }
             .overlay { directionalHighlight }
+            .overlay { restingRefraction }
             .overlay { chromaticEdge }
             .scaleEffect(
-                x: 1 + abs(hoverVector.width) * motionStrength * 0.02,
-                y: 1 + abs(hoverVector.height) * motionStrength * 0.02
+                x: 1 + abs(hoverVector.width) * motionStrength * 0.030 - abs(hoverVector.height) * motionStrength * 0.012,
+                y: 1 + abs(hoverVector.height) * motionStrength * 0.030 - abs(hoverVector.width) * motionStrength * 0.012
             )
             .offset(
-                x: hoverVector.width * motionStrength * 8,
-                y: hoverVector.height * motionStrength * 6
+                x: hoverVector.width * motionStrength * 12,
+                y: hoverVector.height * motionStrength * 10
             )
+    }
+
+    @ViewBuilder
+    private var restingRefraction: some View {
+        switch refractionMode {
+        case .standard:
+            shape.strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.08 + displacement * 0.26), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: CGFloat(0.8 + displacement * 1.8 + elasticity * 0.8)
+            )
+        case .polar:
+            shape.strokeBorder(
+                AngularGradient(colors: [.white.opacity(0.12 + displacement * 0.32), .clear, accent.opacity(0.08 * saturation), .clear], center: .center),
+                lineWidth: CGFloat(1 + displacement * 2.4 + elasticity * 0.8)
+            )
+        case .prominent:
+            shape.strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.18 + displacement * 0.38), accent.opacity(0.08 * saturation), .clear], startPoint: .top, endPoint: .bottom),
+                lineWidth: CGFloat(1.4 + displacement * 3.2 + elasticity * 0.8)
+            )
+        }
     }
 }
 
