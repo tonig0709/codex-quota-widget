@@ -247,36 +247,47 @@ private struct DesktopGlassSurface: View {
     }
 
     var body: some View {
-        DesktopVisualEffectView(isLight: isLight)
-            .overlay { shape.fill(filmColor) }
-            .overlay { shape.fill((isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.16 : 0.09))) }
-            .overlay { shape.fill(tone.opacity((0.02 + edgeStrength * 0.045) * saturation)) }
-            .overlay {
-                shape
-                    .strokeBorder(outerBorder, lineWidth: borderWidth)
-                    .overlay {
-                        shape.inset(by: 1)
-                            .strokeBorder(innerBorder, lineWidth: 0.5)
-                    }
-            }
-            .overlay(alignment: .top) {
-                Capsule()
-                    .fill(.white.opacity(highlightOpacity))
-                    .frame(height: 0.75)
-                    .padding(.horizontal, 36)
-                    .padding(.top, 1)
-            }
-            .overlay { directionalHighlight }
-            .overlay { restingRefraction }
-            .overlay { chromaticEdge }
-            .scaleEffect(
-                x: 1 + abs(hoverVector.width) * motionStrength * 0.030 - abs(hoverVector.height) * motionStrength * 0.012,
-                y: 1 + abs(hoverVector.height) * motionStrength * 0.030 - abs(hoverVector.width) * motionStrength * 0.012
-            )
-            .offset(
-                x: hoverVector.width * motionStrength * 12,
-                y: hoverVector.height * motionStrength * 10
-            )
+        ZStack {
+            DesktopVisualEffectView(isLight: isLight)
+            shape.fill(filmColor)
+            shape.fill(frostColor)
+            shape.fill(tone.opacity(toneOpacity))
+            borderLayer
+            topHighlight
+            directionalHighlight
+            restingRefraction
+            chromaticEdge
+        }
+        .scaleEffect(x: scaleX, y: scaleY)
+        .offset(x: offsetX, y: offsetY)
+    }
+
+    private var frostColor: Color {
+        (isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.16 : 0.09))
+    }
+
+    private var toneOpacity: Double { (0.02 + edgeStrength * 0.045) * saturation }
+    private var scaleX: CGFloat { 1 + abs(hoverVector.width) * motionStrength * 0.030 - abs(hoverVector.height) * motionStrength * 0.012 }
+    private var scaleY: CGFloat { 1 + abs(hoverVector.height) * motionStrength * 0.030 - abs(hoverVector.width) * motionStrength * 0.012 }
+    private var offsetX: CGFloat { hoverVector.width * motionStrength * 12 }
+    private var offsetY: CGFloat { hoverVector.height * motionStrength * 10 }
+
+    private var borderLayer: some View {
+        ZStack {
+            shape.strokeBorder(outerBorder, lineWidth: borderWidth)
+            shape.inset(by: 1).strokeBorder(innerBorder, lineWidth: 0.5)
+        }
+    }
+
+    private var topHighlight: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(.white.opacity(highlightOpacity))
+                .frame(height: 0.75)
+                .padding(.horizontal, 36)
+                .padding(.top, 1)
+            Spacer(minLength: 0)
+        }
     }
 
     @ViewBuilder
