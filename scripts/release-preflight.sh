@@ -187,7 +187,7 @@ require_text 'view.blendingMode = .behindWindow' App/DesktopGlassPanelView.swift
 require_text 'Slider(value: value' App/GlassSettingsView.swift "glass inspector lacks native live sliders"
 require_text 'QuotaWidgetView(snapshot: panelSnapshot' App/DesktopGlassPanelView.swift "desktop panel does not reuse the widget information layout"
 require_text '.inspector(isPresented:' App/DashboardView.swift "dashboard lacks the glass settings inspector"
-require_text 'GlassSettingsView(compact: true)' App/DesktopGlassPanelView.swift "desktop panel does not reuse glass settings"
+require_text 'GlassSettingsView(compact: true' App/DesktopGlassPanelView.swift "desktop panel does not reuse glass settings"
 require_text '.onContinuousHover(perform: updateHover)' App/DesktopGlassPanelView.swift "desktop glass lacks pointer-following feedback"
 require_text 'accessibilityReduceMotion' App/DesktopGlassPanelView.swift "desktop glass motion lacks reduced-motion fallback"
 require_text 'GlassSettingKeys.elasticity' App/DesktopGlassPanelView.swift "desktop glass does not apply its elasticity setting"

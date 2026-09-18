@@ -136,48 +136,67 @@ private struct WidgetTransparentDarkSurface: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let resolvedOpacity = reduceTransparency ? 1 : settings.opacity
-        let shape = RoundedRectangle(cornerRadius: CGFloat(settings.cornerRadius), style: .continuous)
-        let tone: Color = switch settings.tone {
+        ZStack {
+            shape.fill(.black.opacity(WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)))
+            shape.fill(.black.opacity(settings.blurAmount * 0.10))
+            shape.fill(toneColor.opacity(toneOpacity))
+            borderLayer
+            topHighlight
+            staticRefraction
+            chromaticEdge
+        }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: CGFloat(settings.cornerRadius), style: .continuous)
+    }
+
+    private var resolvedOpacity: Double { reduceTransparency ? 1 : settings.opacity }
+    private var toneOpacity: Double { (0.02 + settings.edgeStrength * 0.04) * settings.saturation }
+
+    private var toneColor: Color {
+        switch settings.tone {
         case "cool": Color(red: 0.35, green: 0.58, blue: 1)
         case "warm": Color(red: 1, green: 0.56, blue: 0.26)
         default: .clear
         }
+    }
 
-        shape
-            .fill(.black.opacity(WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)))
-            .overlay { shape.fill(.black.opacity(settings.blurAmount * 0.10)) }
-            .overlay { shape.fill(tone.opacity((0.02 + settings.edgeStrength * 0.04) * settings.saturation)) }
-            .overlay {
-                shape
-                    .strokeBorder(
-                        .white.opacity(0.12 + settings.edgeStrength * 0.22),
-                        lineWidth: 0.65 + settings.edgeStrength * 0.75 + settings.displacement * 1.25
-                    )
-                    .overlay {
-                        shape.inset(by: 0.8 + settings.displacement * 1.8)
-                            .strokeBorder(.white.opacity(0.07 + settings.displacement * 0.07), lineWidth: 0.4 + settings.displacement * 0.9)
-                    }
-            }
-            .overlay(alignment: .top) {
-                Capsule()
-                    .fill(.white.opacity(0.18))
-                    .frame(height: 0.75)
-                    .padding(.horizontal, 36)
-                    .padding(.top, 1)
-            }
-            .overlay { staticRefraction(shape: shape) }
-            .overlay {
-                let offset = CGFloat(settings.dispersion * 3)
-                ZStack {
-                    shape.strokeBorder(.red.opacity(settings.dispersion * 0.18), lineWidth: 0.65).offset(x: -offset)
-                    shape.strokeBorder(.cyan.opacity(settings.dispersion * 0.18), lineWidth: 0.65).offset(x: offset)
-                }
-            }
+    private var borderLayer: some View {
+        ZStack {
+            shape.strokeBorder(
+                .white.opacity(0.12 + settings.edgeStrength * 0.22),
+                lineWidth: 0.65 + settings.edgeStrength * 0.75 + settings.displacement * 1.25
+            )
+            shape.inset(by: 0.8 + settings.displacement * 1.8)
+                .strokeBorder(
+                    .white.opacity(0.07 + settings.displacement * 0.07),
+                    lineWidth: 0.4 + settings.displacement * 0.9
+                )
+        }
+    }
+
+    private var topHighlight: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(.white.opacity(0.18))
+                .frame(height: 0.75)
+                .padding(.horizontal, 36)
+                .padding(.top, 1)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var chromaticEdge: some View {
+        let offset = CGFloat(settings.dispersion * 3)
+        return ZStack {
+            shape.strokeBorder(.red.opacity(settings.dispersion * 0.18), lineWidth: 0.65).offset(x: -offset)
+            shape.strokeBorder(.cyan.opacity(settings.dispersion * 0.18), lineWidth: 0.65).offset(x: offset)
+        }
     }
 
     @ViewBuilder
-    private func staticRefraction(shape: RoundedRectangle) -> some View {
+    private var staticRefraction: some View {
         switch settings.refractionMode {
         case .standard:
             shape.strokeBorder(
