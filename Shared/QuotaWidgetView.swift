@@ -259,6 +259,7 @@ public struct LiquidGlassSurface: View {
             }
             .overlay { chromaticEdge(shape: shape) }
             .overlay { refractionHighlight(shape: shape) }
+            .overlay(alignment: .topLeading) { elasticHighlight }
     }
 
     @ViewBuilder
@@ -307,48 +308,58 @@ public struct LiquidGlassSurface: View {
     }
 
     private var rimWidth: CGFloat {
-        CGFloat(0.65 + edgeStrength * 0.75 + displacement * 1.25)
+        CGFloat(0.65 + edgeStrength * 1.35)
     }
 
-    private var rimInset: CGFloat { CGFloat(0.8 + displacement * 1.8) }
-    private var innerRimWidth: CGFloat { CGFloat(0.4 + displacement * 0.9) }
+    private var rimInset: CGFloat { CGFloat(1.2 + displacement * 5.2) }
+    private var innerRimWidth: CGFloat { CGFloat(0.5 + displacement * 2.5) }
 
     private var frostColor: Color {
-        (isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.18 : 0.10))
+        (isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.28 : 0.16))
     }
 
     private var toneOpacity: Double {
-        (0.02 + edgeStrength * 0.04) * saturation
+        0.035 * saturation
+    }
+
+    private var elasticHighlight: some View {
+        Capsule()
+            .fill(.white.opacity((isLight ? 0.30 : 0.16) + elasticity * 0.34))
+            .frame(width: CGFloat(42 + elasticity * 118), height: CGFloat(1 + elasticity * 4.5))
+            .blur(radius: CGFloat(elasticity * 1.2))
+            .padding(.leading, CGFloat(18 + displacement * 10))
+            .padding(.top, CGFloat(1.2 + displacement * 2.8))
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
     private func refractionHighlight(shape: RoundedRectangle) -> some View {
         switch refractionMode {
         case .standard:
-            shape.strokeBorder(
+            shape.inset(by: CGFloat(1 + displacement * 4)).strokeBorder(
                 LinearGradient(
-                    colors: [.white.opacity(0.08 + displacement * 0.26), .clear, .white.opacity(0.03)],
+                    colors: [.white.opacity(0.16 + displacement * 0.48), .clear, .white.opacity(0.06)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),
-                lineWidth: CGFloat(0.8 + displacement * 1.8 + elasticity * 0.8)
+                lineWidth: CGFloat(1 + displacement * 3.2)
             )
         case .polar:
-            shape.strokeBorder(
+            shape.inset(by: CGFloat(1 + displacement * 4)).strokeBorder(
                 AngularGradient(
-                    colors: [.white.opacity(0.12 + displacement * 0.32), .clear, accent.opacity(0.08 * saturation), .clear, .white.opacity(0.12 + displacement * 0.32)],
+                    colors: [.white.opacity(0.20 + displacement * 0.52), .clear, accent.opacity(0.16 * saturation), .clear, .white.opacity(0.20 + displacement * 0.52)],
                     center: .center
                 ),
-                lineWidth: CGFloat(1 + displacement * 2.4 + elasticity * 0.8)
+                lineWidth: CGFloat(1.2 + displacement * 4)
             )
         case .prominent:
-            shape.strokeBorder(
+            shape.inset(by: CGFloat(1 + displacement * 4)).strokeBorder(
                 LinearGradient(
-                    colors: [.white.opacity(0.18 + displacement * 0.38), accent.opacity(0.08 * saturation), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [.white.opacity(0.30 + displacement * 0.58), accent.opacity(0.20 * saturation), .clear, .black.opacity(0.10 + displacement * 0.12)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 ),
-                lineWidth: CGFloat(1.4 + displacement * 3.2 + elasticity * 0.8)
+                lineWidth: CGFloat(1.8 + displacement * 5)
             )
         }
     }

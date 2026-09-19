@@ -257,25 +257,38 @@ private struct DesktopGlassSurface: View {
             directionalHighlight
             restingRefraction
             chromaticEdge
+            elasticHighlight
         }
-        .scaleEffect(x: scaleX, y: scaleY)
-        .offset(x: offsetX, y: offsetY)
     }
 
     private var frostColor: Color {
         (isLight ? Color.white : Color.black).opacity(blurAmount * (isLight ? 0.16 : 0.09))
     }
 
-    private var toneOpacity: Double { (0.02 + edgeStrength * 0.045) * saturation }
-    private var scaleX: CGFloat { 1 + abs(hoverVector.width) * motionStrength * 0.030 - abs(hoverVector.height) * motionStrength * 0.012 }
-    private var scaleY: CGFloat { 1 + abs(hoverVector.height) * motionStrength * 0.030 - abs(hoverVector.width) * motionStrength * 0.012 }
-    private var offsetX: CGFloat { hoverVector.width * motionStrength * 12 }
-    private var offsetY: CGFloat { hoverVector.height * motionStrength * 10 }
+    private var toneOpacity: Double { 0.035 * saturation }
+
+    private var elasticHighlight: some View {
+        VStack {
+            HStack {
+                Capsule()
+                    .fill(.white.opacity((isLight ? 0.30 : 0.16) + elasticity * 0.34))
+                    .frame(width: CGFloat(42 + elasticity * 118), height: CGFloat(1 + elasticity * 4.5))
+                    .blur(radius: CGFloat(elasticity * 1.2))
+                    .offset(x: hoverVector.width * motionStrength * 16, y: hoverVector.height * motionStrength * 8)
+                    .padding(.leading, CGFloat(18 + displacement * 10))
+                    .padding(.top, CGFloat(1.2 + displacement * 2.8))
+                Spacer(minLength: 0)
+            }
+            Spacer(minLength: 0)
+        }
+        .allowsHitTesting(false)
+    }
 
     private var borderLayer: some View {
         ZStack {
-            shape.strokeBorder(outerBorder, lineWidth: borderWidth)
-            shape.inset(by: 1).strokeBorder(innerBorder, lineWidth: 0.5)
+            shape.strokeBorder(outerBorder, lineWidth: 0.65 + CGFloat(edgeStrength) * 1.35)
+            shape.inset(by: 1.2 + displacement * 5.2)
+                .strokeBorder(innerBorder.opacity(0.65 + displacement * 0.35), lineWidth: 0.5 + displacement * 2.5)
         }
     }
 
@@ -294,19 +307,19 @@ private struct DesktopGlassSurface: View {
     private var restingRefraction: some View {
         switch refractionMode {
         case .standard:
-            shape.strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.08 + displacement * 0.26), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
-                lineWidth: CGFloat(0.8 + displacement * 1.8 + elasticity * 0.8)
+            shape.inset(by: CGFloat(1 + displacement * 4)).strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.16 + displacement * 0.48), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: CGFloat(1 + displacement * 3.2)
             )
         case .polar:
-            shape.strokeBorder(
-                AngularGradient(colors: [.white.opacity(0.12 + displacement * 0.32), .clear, accent.opacity(0.08 * saturation), .clear], center: .center),
-                lineWidth: CGFloat(1 + displacement * 2.4 + elasticity * 0.8)
+            shape.inset(by: CGFloat(1 + displacement * 4)).strokeBorder(
+                AngularGradient(colors: [.white.opacity(0.20 + displacement * 0.52), .clear, accent.opacity(0.16 * saturation), .clear], center: .center),
+                lineWidth: CGFloat(1.2 + displacement * 4)
             )
         case .prominent:
-            shape.strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.18 + displacement * 0.38), accent.opacity(0.08 * saturation), .clear], startPoint: .top, endPoint: .bottom),
-                lineWidth: CGFloat(1.4 + displacement * 3.2 + elasticity * 0.8)
+            shape.inset(by: CGFloat(1 + displacement * 4)).strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.30 + displacement * 0.58), accent.opacity(0.20 * saturation), .clear, .black.opacity(0.10 + displacement * 0.12)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: CGFloat(1.8 + displacement * 5)
             )
         }
     }
@@ -349,5 +362,6 @@ private struct DesktopPanelWindowConfigurator: NSViewRepresentable {
         window.titlebarAppearsTransparent = true
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        window.invalidateShadow()
     }
 }

@@ -98,20 +98,26 @@ private struct CodexWidgetSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         if settings.appearance == .light {
             content.containerBackground(for: .widget) {
-                LiquidGlassSurface(
-                    isLight: true,
-                    opacity: settings.opacity,
-                    accent: accent,
-                    cornerRadius: settings.cornerRadius,
-                    edgeStrength: settings.edgeStrength,
-                    tone: toneColor,
-                    dispersion: settings.dispersion,
-                    elasticity: settings.elasticity,
-                    displacement: settings.displacement,
-                    blurAmount: settings.blurAmount,
-                    saturation: settings.saturation,
-                    refractionMode: settings.refractionMode
-                )
+                ZStack {
+                    // WidgetKit owns the real outer silhouette. Cover it first,
+                    // then draw the adjustable optical corner above it.
+                    ContainerRelativeShape()
+                        .fill(Color(red: 0.93, green: 0.96, blue: 1).opacity(settings.opacity))
+                    LiquidGlassSurface(
+                        isLight: true,
+                        opacity: settings.opacity,
+                        accent: accent,
+                        cornerRadius: settings.cornerRadius,
+                        edgeStrength: settings.edgeStrength,
+                        tone: toneColor,
+                        dispersion: settings.dispersion,
+                        elasticity: settings.elasticity,
+                        displacement: settings.displacement,
+                        blurAmount: settings.blurAmount,
+                        saturation: settings.saturation,
+                        refractionMode: settings.refractionMode
+                    )
+                }
             }
         } else {
             content.containerBackground(for: .widget) {
@@ -137,13 +143,14 @@ private struct WidgetTransparentDarkSurface: View {
 
     var body: some View {
         ZStack {
-            shape.fill(.black.opacity(WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)))
-            shape.fill(.black.opacity(settings.blurAmount * 0.10))
+            ContainerRelativeShape().fill(.black.opacity(WidgetGlassOpacity.darkFilmOpacity(resolvedOpacity)))
+            ContainerRelativeShape().fill(.black.opacity(settings.blurAmount * 0.16))
             shape.fill(toneColor.opacity(toneOpacity))
             borderLayer
             topHighlight
             staticRefraction
             chromaticEdge
+            elasticHighlight
         }
     }
 
@@ -152,7 +159,7 @@ private struct WidgetTransparentDarkSurface: View {
     }
 
     private var resolvedOpacity: Double { reduceTransparency ? 1 : settings.opacity }
-    private var toneOpacity: Double { (0.02 + settings.edgeStrength * 0.04) * settings.saturation }
+    private var toneOpacity: Double { 0.035 * settings.saturation }
 
     private var toneColor: Color {
         switch settings.tone {
@@ -166,13 +173,28 @@ private struct WidgetTransparentDarkSurface: View {
         ZStack {
             shape.strokeBorder(
                 .white.opacity(0.12 + settings.edgeStrength * 0.22),
-                lineWidth: 0.65 + settings.edgeStrength * 0.75 + settings.displacement * 1.25
+                lineWidth: 0.65 + settings.edgeStrength * 1.35
             )
-            shape.inset(by: 0.8 + settings.displacement * 1.8)
+            shape.inset(by: 1.2 + settings.displacement * 5.2)
                 .strokeBorder(
-                    .white.opacity(0.07 + settings.displacement * 0.07),
-                    lineWidth: 0.4 + settings.displacement * 0.9
+                    .white.opacity(0.08 + settings.displacement * 0.22),
+                    lineWidth: 0.5 + settings.displacement * 2.5
                 )
+        }
+    }
+
+    private var elasticHighlight: some View {
+        VStack {
+            HStack {
+                Capsule()
+                    .fill(.white.opacity(0.16 + settings.elasticity * 0.34))
+                    .frame(width: CGFloat(42 + settings.elasticity * 118), height: CGFloat(1 + settings.elasticity * 4.5))
+                    .blur(radius: CGFloat(settings.elasticity * 1.2))
+                    .padding(.leading, CGFloat(18 + settings.displacement * 10))
+                    .padding(.top, CGFloat(1.2 + settings.displacement * 2.8))
+                Spacer(minLength: 0)
+            }
+            Spacer(minLength: 0)
         }
     }
 
@@ -199,19 +221,19 @@ private struct WidgetTransparentDarkSurface: View {
     private var staticRefraction: some View {
         switch settings.refractionMode {
         case .standard:
-            shape.strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.08 + settings.displacement * 0.26), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
-                lineWidth: 0.8 + settings.displacement * 1.8 + settings.elasticity * 0.8
+            shape.inset(by: 1 + settings.displacement * 4).strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.16 + settings.displacement * 0.48), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: 1 + settings.displacement * 3.2
             )
         case .polar:
-            shape.strokeBorder(
-                AngularGradient(colors: [.white.opacity(0.12 + settings.displacement * 0.32), .clear, accent.opacity(0.08 * settings.saturation), .clear], center: .center),
-                lineWidth: 1 + settings.displacement * 2.4 + settings.elasticity * 0.8
+            shape.inset(by: 1 + settings.displacement * 4).strokeBorder(
+                AngularGradient(colors: [.white.opacity(0.20 + settings.displacement * 0.52), .clear, accent.opacity(0.16 * settings.saturation), .clear], center: .center),
+                lineWidth: 1.2 + settings.displacement * 4
             )
         case .prominent:
-            shape.strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.18 + settings.displacement * 0.38), accent.opacity(0.08 * settings.saturation), .clear], startPoint: .top, endPoint: .bottom),
-                lineWidth: 1.4 + settings.displacement * 3.2 + settings.elasticity * 0.8
+            shape.inset(by: 1 + settings.displacement * 4).strokeBorder(
+                LinearGradient(colors: [.white.opacity(0.30 + settings.displacement * 0.58), accent.opacity(0.20 * settings.saturation), .clear, .black.opacity(0.10 + settings.displacement * 0.12)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: 1.8 + settings.displacement * 5
             )
         }
     }

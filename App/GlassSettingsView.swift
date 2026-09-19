@@ -153,8 +153,8 @@ struct GlassSettingsView: View {
             controlSection("基础") {
                 slider("不透明度", value: $opacity, range: WidgetGlassOpacity.minimum...WidgetGlassOpacity.maximum, format: .percent)
                 slider("边缘强度", value: $edgeStrength, range: 0...1, format: .percent)
-                slider("弹性", value: $elasticity, range: 0...1, format: .percent)
-                slider("边缘圆角", value: $cornerRadius, range: 10...64, format: .number)
+                slider("弹性高光", value: $elasticity, range: 0...1, format: .percent)
+                slider("光学圆角", value: $cornerRadius, range: 10...64, format: .number)
             }
 
             controlSection("高级设置") {
@@ -340,9 +340,6 @@ private struct GlassOpticsPreview: View {
                     saturation: settings.saturation,
                     refractionMode: settings.refractionMode
                 )
-                .scaleEffect(x: scaleX, y: scaleY)
-                .offset(x: pointer.width * settings.elasticity * 5, y: pointer.height * settings.elasticity * 4)
-
                 shape
                     .strokeBorder(
                         RadialGradient(
@@ -351,8 +348,9 @@ private struct GlassOpticsPreview: View {
                             startRadius: 0,
                             endRadius: 96
                         ),
-                        lineWidth: 2.2 + settings.displacement * 2
+                        lineWidth: 2.2 + settings.displacement * 4 + settings.elasticity * 3
                     )
+                    .offset(x: pointer.width * settings.elasticity * 8, y: pointer.height * settings.elasticity * 6)
 
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
@@ -369,8 +367,6 @@ private struct GlassOpticsPreview: View {
         .frame(height: 88)
     }
 
-    private var scaleX: CGFloat { 1 + abs(pointer.width) * settings.elasticity * 0.030 - abs(pointer.height) * settings.elasticity * 0.012 }
-    private var scaleY: CGFloat { 1 + abs(pointer.height) * settings.elasticity * 0.030 - abs(pointer.width) * settings.elasticity * 0.012 }
     private var highlightCenter: UnitPoint {
         UnitPoint(x: 0.5 + pointer.width * 0.5, y: 0.5 + pointer.height * 0.5)
     }

@@ -241,34 +241,77 @@ await MainActor.run {
         "glass corner-radius setting has no visible render effect"
     )
 
-    let quietOptics = render(
+    let quietElasticity = render(
         LiquidGlassSurface(
             isLight: true,
             opacity: 0.7,
             accent: .blue,
             elasticity: 0,
-            displacement: 0,
+            displacement: 0.5,
             refractionMode: .prominent
         ),
         width: 240,
         height: 120
     )
-    let expressiveOptics = render(
+    let expressiveElasticity = render(
         LiquidGlassSurface(
             isLight: true,
             opacity: 0.7,
             accent: .blue,
             elasticity: 1,
-            displacement: 1,
+            displacement: 0.5,
             refractionMode: .prominent
         ),
         width: 240,
         height: 120
     )
     precondition(
-        changedPixels(quietOptics, expressiveOptics, in: fullFrame) > 100,
-        "glass elasticity and displacement settings have no visible render effect"
+        changedPixels(quietElasticity, expressiveElasticity, in: fullFrame) > 100,
+        "glass elasticity setting has no visible render effect"
     )
+
+    let quietDisplacement = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, elasticity: 0.5, displacement: 0),
+        width: 240,
+        height: 120
+    )
+    let expressiveDisplacement = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, elasticity: 0.5, displacement: 1),
+        width: 240,
+        height: 120
+    )
+    precondition(changedPixels(quietDisplacement, expressiveDisplacement, in: fullFrame) > 100, "glass displacement setting has no visible render effect")
+
+    let standardRefraction = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, displacement: 0.8, refractionMode: .standard),
+        width: 240,
+        height: 120
+    )
+    let polarRefraction = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, displacement: 0.8, refractionMode: .polar),
+        width: 240,
+        height: 120
+    )
+    let prominentRefraction = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, displacement: 0.8, refractionMode: .prominent),
+        width: 240,
+        height: 120
+    )
+    precondition(changedPixels(standardRefraction, polarRefraction, in: fullFrame) > 100, "polar refraction mode has no visible effect")
+    precondition(changedPixels(polarRefraction, prominentRefraction, in: fullFrame) > 100, "prominent refraction mode has no visible effect")
+
+    let weakEdge = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, edgeStrength: 0, tone: .orange),
+        width: 240,
+        height: 120
+    )
+    let strongEdge = render(
+        LiquidGlassSurface(isLight: true, opacity: 0.7, accent: .blue, edgeStrength: 1, tone: .orange),
+        width: 240,
+        height: 120
+    )
+    let interior = CGRect(x: 0.25, y: 0.25, width: 0.5, height: 0.5)
+    precondition(changedPixels(weakEdge, strongEdge, in: interior) == 0, "glass edge strength changes the interior tone")
 
 }
 #endif
